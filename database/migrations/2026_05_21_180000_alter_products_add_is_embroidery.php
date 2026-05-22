@@ -9,8 +9,11 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('products', function (Blueprint $table) {
-            $table->boolean('is_embroidery')->default(false)->after('estimated_production_hours');
+            if (! Schema::hasColumn('products', 'is_embroidery')) {
+                $table->boolean('is_embroidery')->default(false);
+            }
         });
+
     }
 
     public function down(): void

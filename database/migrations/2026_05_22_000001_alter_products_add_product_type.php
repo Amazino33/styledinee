@@ -9,13 +9,15 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('products', function (Blueprint $table) {
-            $table->enum('product_type', [
-                'ready_made',
-                'embroidery',
-                'printing',
-                'fabric',
-                'accessory',
-            ])->default('ready_made')->after('production_type');
+            if (! Schema::hasColumn('products', 'product_type')) {
+                $table->enum('product_type', [
+                    'ready_made',
+                    'embroidery',
+                    'printing',
+                    'fabric',
+                    'accessory',
+                ])->default('ready_made');
+            }
         });
     }
 
