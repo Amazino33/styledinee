@@ -21,13 +21,8 @@ return new class extends Migration
                     $table->dropUnique('customer_measurements_customer_id_product_id_unique');
                 });
             }
-            // Drop product_id FK
-            if ($this->indexExists('customer_measurements_product_id_foreign')) {
-                Schema::table('customer_measurements', function (Blueprint $table) {
-                    $table->dropForeign(['product_id']);
-                });
-            }
-            // Drop columns
+            // Disable FK checks so we don't need to know the exact constraint name
+            Schema::disableForeignKeyConstraints();
             Schema::table('customer_measurements', function (Blueprint $table) {
                 $cols = ['product_id'];
                 if (Schema::hasColumn('customer_measurements', 'values')) {
@@ -35,6 +30,7 @@ return new class extends Migration
                 }
                 $table->dropColumn($cols);
             });
+            Schema::enableForeignKeyConstraints();
             // Remove the temporary backing index
             if ($this->indexExists('cm_rework_customer_id_tmp')) {
                 Schema::table('customer_measurements', function (Blueprint $table) {
