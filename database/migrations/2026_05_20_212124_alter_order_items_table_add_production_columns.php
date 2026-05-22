@@ -11,7 +11,32 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Columns already exist in create_order_items_table migration — no-op
+        Schema::table('order_items', function (Blueprint $table) {
+            if (! Schema::hasColumn('order_items', 'customer_id')) {
+                $table->foreignId('customer_id')->nullable()->after('order_id')->constrained()->nullOnDelete();
+            }
+            if (! Schema::hasColumn('order_items', 'production_type')) {
+                $table->string('production_type')->nullable()->after('service_id');
+            }
+            if (! Schema::hasColumn('order_items', 'item_stage')) {
+                $table->string('item_stage')->nullable()->after('production_type');
+            }
+            if (! Schema::hasColumn('order_items', 'measurements')) {
+                $table->json('measurements')->nullable()->after('item_stage');
+            }
+            if (! Schema::hasColumn('order_items', 'washing_required')) {
+                $table->boolean('washing_required')->default(false)->after('measurements');
+            }
+            if (! Schema::hasColumn('order_items', 'washing_skipped')) {
+                $table->boolean('washing_skipped')->default(false)->after('washing_required');
+            }
+            if (! Schema::hasColumn('order_items', 'washing_skip_reason')) {
+                $table->string('washing_skip_reason')->nullable()->after('washing_skipped');
+            }
+            if (! Schema::hasColumn('order_items', 'stage_updated_at')) {
+                $table->timestamp('stage_updated_at')->nullable()->after('washing_skip_reason');
+            }
+        });
     }
 
     /**
