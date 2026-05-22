@@ -23,12 +23,16 @@ return new class extends Migration
                     $table->dropUnique('customer_measurements_customer_id_clothing_type_id_unique');
                 });
             }
-            // Disable FK checks so the exact constraint name doesn't matter
-            Schema::disableForeignKeyConstraints();
+            // Drop the FK constraint (must be separate call, before dropColumn)
+            if ($this->fkExists('customer_measurements', 'customer_measurements_clothing_type_id_foreign')) {
+                Schema::table('customer_measurements', function (Blueprint $table) {
+                    $table->dropForeign(['clothing_type_id']);
+                });
+            }
+            // Now safe to drop the column
             Schema::table('customer_measurements', function (Blueprint $table) {
                 $table->dropColumn('clothing_type_id');
             });
-            Schema::enableForeignKeyConstraints();
         }
 
         // Add product_id if not yet present
