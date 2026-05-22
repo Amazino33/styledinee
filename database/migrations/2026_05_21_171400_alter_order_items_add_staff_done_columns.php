@@ -10,13 +10,13 @@ return new class extends Migration
     {
         Schema::table('order_items', function (Blueprint $table) {
             if (! Schema::hasColumn('order_items', 'staff_marked_done')) {
-                $table->boolean('staff_marked_done')->default(false)->after('stage_updated_at');
+                $table->boolean('staff_marked_done')->default(false);
             }
             if (! Schema::hasColumn('order_items', 'staff_done_at')) {
-                $table->timestamp('staff_done_at')->nullable()->after('staff_marked_done');
+                $table->timestamp('staff_done_at')->nullable();
             }
             if (! Schema::hasColumn('order_items', 'staff_done_by')) {
-                $table->foreignId('staff_done_by')->nullable()->constrained('users')->nullOnDelete()->after('staff_done_at');
+                $table->foreignId('staff_done_by')->nullable()->constrained('users')->nullOnDelete();
             }
         });
     }

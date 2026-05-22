@@ -9,7 +9,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('order_items', function (Blueprint $table) {
-            $table->json('production_path')->nullable()->after('item_stage');
+            if (! Schema::hasColumn('order_items', 'production_path')) {
+                $table->json('production_path')->nullable();
+            }
         });
     }
 
