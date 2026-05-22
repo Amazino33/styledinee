@@ -31,12 +31,6 @@ return new class extends Migration
                 $table->dropColumn($cols);
             });
             Schema::enableForeignKeyConstraints();
-            // Remove the temporary backing index
-            if ($this->indexExists('cm_rework_customer_id_tmp')) {
-                Schema::table('customer_measurements', function (Blueprint $table) {
-                    $table->dropIndex('cm_rework_customer_id_tmp');
-                });
-            }
         }
 
         Schema::table('customer_measurements', function (Blueprint $table) {
@@ -53,6 +47,19 @@ return new class extends Migration
                 $table->text('notes')->nullable();
             }
         });
+
+        // Add unique(customer_id, clothing_type_id) so it backs the customer_id FK,
+        // then we can safely drop the temporary standalone index
+        if (! $this->indexExists('customer_measurements_customer_id_clothing_type_id_unique')) {
+            Schema::table('customer_measurements', function (Blueprint $table) {
+                $table->unique(['customer_id', 'clothing_type_id']);
+            });
+        }
+        if ($this->indexExists('cm_rework_customer_id_tmp')) {
+            Schema::table('customer_measurements', function (Blueprint $table) {
+                $table->dropIndex('cm_rework_customer_id_tmp');
+            });
+        }
     }
 
     private function indexExists(string $index): bool
