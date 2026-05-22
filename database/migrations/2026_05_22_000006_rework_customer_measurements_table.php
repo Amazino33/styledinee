@@ -9,24 +9,38 @@ return new class extends Migration
     public function up(): void
     {
         if (Schema::hasColumn('customer_measurements', 'product_id')) {
-            // Drop unique constraint first (MySQL blocks column drop while index exists)
+            // Add standalone index on customer_id so MySQL will allow dropping the unique (customer_id, product_id)
+            if (! $this->indexExists('cm_rework_customer_id_tmp')) {
+                Schema::table('customer_measurements', function (Blueprint $table) {
+                    $table->index('customer_id', 'cm_rework_customer_id_tmp');
+                });
+            }
+            // Now drop the unique constraint
             if ($this->indexExists('customer_measurements_customer_id_product_id_unique')) {
                 Schema::table('customer_measurements', function (Blueprint $table) {
                     $table->dropUnique('customer_measurements_customer_id_product_id_unique');
                 });
             }
-            // Drop FK separately
+            // Drop product_id FK
             if ($this->indexExists('customer_measurements_product_id_foreign')) {
                 Schema::table('customer_measurements', function (Blueprint $table) {
                     $table->dropForeign(['product_id']);
                 });
             }
-            // Now safe to drop the columns
+            // Drop columns
             Schema::table('customer_measurements', function (Blueprint $table) {
-                $table->dropColumn(
-                    array_filter(['product_id', Schema::hasColumn('customer_measurements', 'values') ? 'values' : null])
-                );
+                $cols = ['product_id'];
+                if (Schema::hasColumn('customer_measurements', 'values')) {
+                    $cols[] = 'values';
+                }
+                $table->dropColumn($cols);
             });
+            // Remove the temporary backing index
+            if ($this->indexExists('cm_rework_customer_id_tmp')) {
+                Schema::table('customer_measurements', function (Blueprint $table) {
+                    $table->dropIndex('cm_rework_customer_id_tmp');
+                });
+            }
         }
 
         Schema::table('customer_measurements', function (Blueprint $table) {
