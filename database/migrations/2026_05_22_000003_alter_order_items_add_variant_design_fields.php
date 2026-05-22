@@ -10,16 +10,16 @@ return new class extends Migration
     {
         Schema::table('order_items', function (Blueprint $table) {
             if (! Schema::hasColumn('order_items', 'variant_id')) {
-                $table->foreignId('variant_id')->nullable()->after('product_id')->constrained('product_variants')->nullOnDelete();
+                $table->foreignId('variant_id')->nullable()->constrained('product_variants')->nullOnDelete();
             }
             if (! Schema::hasColumn('order_items', 'design_notes')) {
-                $table->text('design_notes')->nullable()->after('measurements');
+                $table->text('design_notes')->nullable();
             }
             if (! Schema::hasColumn('order_items', 'design_file')) {
-                $table->string('design_file')->nullable()->after('design_notes');
+                $table->string('design_file')->nullable();
             }
             if (! Schema::hasColumn('order_items', 'production_notes')) {
-                $table->text('production_notes')->nullable()->after('design_file');
+                $table->text('production_notes')->nullable();
             }
         });
     }
