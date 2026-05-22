@@ -17,15 +17,18 @@ return new class extends Migration
                 });
             }
 
-            Schema::table('customer_measurements', function (Blueprint $table) {
-                if ($this->indexExists('customer_measurements', 'customer_measurements_customer_id_clothing_type_id_unique')) {
+            // Drop unique constraint
+            if ($this->indexExists('customer_measurements', 'customer_measurements_customer_id_clothing_type_id_unique')) {
+                Schema::table('customer_measurements', function (Blueprint $table) {
                     $table->dropUnique('customer_measurements_customer_id_clothing_type_id_unique');
-                }
-                if ($this->indexExists('customer_measurements', 'customer_measurements_clothing_type_id_foreign')) {
-                    $table->dropIndex('customer_measurements_clothing_type_id_foreign');
-                }
+                });
+            }
+            // Disable FK checks so the exact constraint name doesn't matter
+            Schema::disableForeignKeyConstraints();
+            Schema::table('customer_measurements', function (Blueprint $table) {
                 $table->dropColumn('clothing_type_id');
             });
+            Schema::enableForeignKeyConstraints();
         }
 
         // Add product_id if not yet present
@@ -33,7 +36,7 @@ return new class extends Migration
             \Illuminate\Support\Facades\DB::table('customer_measurements')->truncate();
 
             Schema::table('customer_measurements', function (Blueprint $table) {
-                $table->foreignId('product_id')->after('customer_id')->constrained()->cascadeOnDelete();
+                $table->foreignId('product_id')->constrained()->cascadeOnDelete();
             });
         }
 
