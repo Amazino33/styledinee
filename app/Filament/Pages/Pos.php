@@ -593,7 +593,7 @@ class Pos extends Page
         $order = Order::create([
             'customer_id'      => $customer->id,
             'customer_name'    => $this->customerName,
-            'customer_email'   => $this->customerEmail ?: null,
+            'customer_email'   => $this->customerEmail ?: ($customer->email ?? null),
             'customer_phone'   => $this->customerPhone,
             'customer_address' => $this->customerAddress ?: null,
             'type'             => $this->orderType,
