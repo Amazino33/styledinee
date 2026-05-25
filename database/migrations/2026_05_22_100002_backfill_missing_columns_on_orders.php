@@ -6,9 +6,6 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::table('orders', function (Blueprint $table) {
@@ -24,17 +21,18 @@ return new class extends Migration
             if (! Schema::hasColumn('orders', 'delivery_notes')) {
                 $table->text('delivery_notes')->nullable();
             }
+            if (! Schema::hasColumn('orders', 'delivery_user_id')) {
+                $table->foreignId('delivery_user_id')->nullable()->constrained('users')->nullOnDelete();
+            }
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::table('orders', function (Blueprint $table) {
             $table->dropForeign(['customer_id']);
-            $table->dropColumn(['customer_id', 'estimated_completion_date', 'delivery_type', 'delivery_notes']);
+            $table->dropForeign(['delivery_user_id']);
+            $table->dropColumn(['customer_id', 'estimated_completion_date', 'delivery_type', 'delivery_notes', 'delivery_user_id']);
         });
     }
 };
