@@ -33,8 +33,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'view customers', 'create customers', 'edit customers', 'delete customers',
             // Production workflow
             'manage assignments', 'verify delivery otp', 'manage bom',
-            'skip washing', 'view tailor queue', 'view washing queue', 'view delivery queue',
-            'view printing queue',
+            'skip washing', 'view tailor queue', 'view embroidery queue', 'view washing queue',
+            'view delivery queue', 'view printing queue',
             // Client portal (used outside admin panel)
             'view own orders',
         ];
@@ -63,6 +63,11 @@ class RolesAndPermissionsSeeder extends Seeder
         $tailor = Role::firstOrCreate(['name' => 'tailor']);
         $tailor->syncPermissions([
             'view orders', 'update order status', 'view tailor queue',
+        ]);
+
+        $embroidery = Role::firstOrCreate(['name' => 'embroidery']);
+        $embroidery->syncPermissions([
+            'view orders', 'update order status', 'view embroidery queue',
         ]);
 
         $dry_cleaner = Role::firstOrCreate(['name' => 'dry_cleaner']);

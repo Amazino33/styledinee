@@ -52,6 +52,7 @@
 .dtl-actions{display:flex;gap:.65rem;margin-top:1.1rem;}
 .dtl-btn-close{flex:1;padding:.5rem;border-radius:7px;font-size:.82rem;font-weight:700;cursor:pointer;font-family:inherit;border:none;background:var(--bg3);color:var(--text2);transition:filter .15s;}
 .dtl-btn-close:hover{filter:brightness(.95);}
+.dtl-btn-print{padding:.5rem 1rem;border-radius:7px;font-size:.82rem;font-weight:700;cursor:pointer;font-family:inherit;border:1px solid var(--border2);background:var(--bg2);color:var(--text2);text-decoration:none;display:inline-flex;align-items:center;gap:.35rem;}
 .dtl-btn-done{flex:2;padding:.5rem;border-radius:7px;font-size:.82rem;font-weight:700;cursor:pointer;font-family:inherit;border:none;background:var(--gold);color:#111827;transition:background .15s;}
 .dtl-btn-done:hover{background:var(--gold-h);}
 .dtl-btn-done:disabled{opacity:.5;cursor:not-allowed;}
@@ -200,6 +201,9 @@
 
     <div class="dtl-actions">
         <button wire:click="closeDetailsModal" class="dtl-btn-close">Close</button>
+        @if($di)
+        <a href="{{ route('print.order-item', $di->id) }}" target="_blank" class="dtl-btn-print">🖨 Print</a>
+        @endif
         @if(! $di?->staff_marked_done)
         <button wire:click="markDone({{ $da->id }})"
             wire:loading.attr="disabled" wire:target="markDone({{ $da->id }})"

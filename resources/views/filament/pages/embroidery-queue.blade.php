@@ -14,7 +14,6 @@
     --green:   #34d399; --green-bg: rgba(16,185,129,.12);
 }
 
-/* ── Card grid ── */
 .q-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:1rem; }
 
 .q-card {
@@ -32,13 +31,8 @@
 
 .q-badges  { display:flex; gap:.4rem; flex-wrap:wrap; align-items:center; margin-bottom:.55rem; }
 .q-stage-badge { font-size:.7rem; font-weight:700; text-transform:uppercase; padding:.18rem .5rem; border-radius:4px; }
-.stage-sewing     { background:rgba(99,102,241,.12); color:#6366f1; }
 .stage-embroidery { background:rgba(168,85,247,.12); color:#a855f7; }
-.stage-finishing  { background:rgba(245,158,11,.12); color:#d97706; }
-.stage-pending    { background:var(--bg3); color:var(--muted); }
-.dark .stage-sewing     { color:#818cf8; }
 .dark .stage-embroidery { color:#c084fc; }
-.dark .stage-finishing  { color:#fbbf24; }
 .q-variant-chip { font-size:.65rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em;
     color:#a855f7; background:rgba(168,85,247,.1); border:1px solid rgba(168,85,247,.25);
     border-radius:4px; padding:.1rem .35rem; }
@@ -89,8 +83,6 @@
     letter-spacing:.1em; color:var(--muted); }
 .dtl-contact-item span  { font-size:.9rem; font-weight:600; color:var(--text); }
 
-.dtl-meas-group { margin-top:.6rem; }
-.dtl-meas-type  { font-size:.72rem; font-weight:700; color:var(--text3); margin-bottom:.3rem; }
 .dtl-meas-grid  { display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr));
     gap:.35rem .65rem; }
 .dtl-meas-item  { font-size:.8rem; color:var(--text2); }
@@ -121,8 +113,8 @@
 
 @if($assignments->isEmpty())
 <div class="empty-state">
-    <div style="font-size:2.5rem; margin-bottom:.75rem;">✂️</div>
-    <p style="font-size:.95rem;">No tailoring assignments for you right now.</p>
+    <div style="font-size:2.5rem; margin-bottom:.75rem;">🧵</div>
+    <p style="font-size:.95rem;">No embroidery assignments for you right now.</p>
 </div>
 @else
 <div class="q-grid">
@@ -130,29 +122,25 @@
     @php $item = $a->orderItem; $order = $a->order; $customer = $order?->customer; @endphp
     <div class="q-card {{ $item?->staff_marked_done ? 'is-done' : '' }}"
          wire:click="openDetailsModal({{ $a->id }})"
-         wire:key="ta-{{ $a->id }}"
+         wire:key="eq-{{ $a->id }}"
          title="Tap to view details">
 
-        {{-- Top row --}}
         <div class="q-top">
             <span class="q-ref">{{ $order?->reference ?? 'N/A' }}</span>
             <span class="q-tap-hint">tap for details →</span>
         </div>
 
-        {{-- Item name --}}
         <div class="q-name">{{ $item?->description ?? 'Order-level task' }}</div>
 
-        {{-- Stage + variant badges --}}
         @if($item)
         <div class="q-badges">
-            <span class="q-stage-badge stage-{{ $item->item_stage }}">{{ ucwords(str_replace('_',' ',$item->item_stage)) }}</span>
+            <span class="q-stage-badge stage-embroidery">Embroidery</span>
             @if($item->variant)
             <span class="q-variant-chip">{{ $item->variant->variant_value }}</span>
             @endif
         </div>
         @endif
 
-        {{-- Customer info --}}
         @if($order)
         <div class="q-cust">
             <span class="q-cust-name">{{ $order->customer_name }}</span>
@@ -162,14 +150,12 @@
         </div>
         @endif
 
-        {{-- Assignment notes --}}
         @if($a->notes)
         <div class="q-notes">📝 {{ $a->notes }}</div>
         @endif
 
         <div class="q-ts">Assigned {{ $a->assigned_at->diffForHumans() }}</div>
 
-        {{-- Action button (stop click bubbling so card tap doesn't also fire this) --}}
         @if($item?->staff_marked_done)
         <div class="done-chip">✓ Marked as done · {{ $item->staff_done_at?->diffForHumans() }}</div>
         @else
@@ -204,14 +190,11 @@
         @if($di?->variant)
         · <span style="color:#a855f7;">{{ ucfirst($di->variant->variant_type) }}: {{ $di->variant->variant_value }}</span>
         @endif
-        @if($di)
-        · <span class="q-stage-badge stage-{{ $di->item_stage }}" style="display:inline-block;">{{ ucwords(str_replace('_',' ',$di->item_stage)) }}</span>
-        @endif
+        · <span class="q-stage-badge stage-embroidery" style="display:inline-block;">Embroidery</span>
     </div>
 
     <hr class="dtl-divider">
 
-    {{-- Customer contact (always visible in modal) --}}
     @if($do)
     <div class="dtl-section">
         <div class="dtl-label">Customer</div>
@@ -224,12 +207,6 @@
             <div class="dtl-contact-item">
                 <small>Phone</small>
                 <span>{{ $do->customer_phone }}</span>
-            </div>
-            @endif
-            @if($showContact && $dc?->email)
-            <div class="dtl-contact-item">
-                <small>Email</small>
-                <span style="font-size:.82rem;">{{ $dc->email }}</span>
             </div>
             @endif
         </div>
@@ -280,7 +257,7 @@
     </div>
     @endif
 
-    {{-- Item measurements (captured at POS for this specific garment) --}}
+    {{-- Measurements --}}
     @php
         $itemMeasurements = collect(is_array($di?->measurements) ? $di->measurements : [])
             ->filter(fn($v) => $v !== null && $v !== '');
@@ -298,14 +275,8 @@
             @endforeach
         </div>
     </div>
-    @elseif($di?->production_type === 'production' && ! empty($di->product?->measurementTemplate?->fields))
-    <hr class="dtl-divider">
-    <div class="dtl-section">
-        <div class="dtl-value" style="color:#d97706;font-size:.82rem;">⚠ No measurements recorded for this item — contact cashier.</div>
-    </div>
     @endif
 
-    {{-- Assignment notes (from admin) --}}
     @if($da->notes)
     <hr class="dtl-divider">
     <div class="dtl-section">

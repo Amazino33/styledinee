@@ -26,14 +26,14 @@ class ProductionTracker extends Page
 
     public const STAGE_ROLES = [
         'sewing'     => 'tailor',
-        'embroidery' => 'tailor',
+        'embroidery' => 'embroidery',
         'printing'   => 'printer',
         'finishing'  => 'dry_cleaner',
     ];
 
     public const STAGE_DEFINITIONS = [
-        'sewing'     => ['label' => 'Sewing',    'role_label' => 'Tailors'],
-        'embroidery' => ['label' => 'Embroidery', 'role_label' => 'Tailors'],
+        'sewing'     => ['label' => 'Sewing',     'role_label' => 'Tailors'],
+        'embroidery' => ['label' => 'Embroidery', 'role_label' => 'Embroiderers'],
         'printing'   => ['label' => 'Printing',   'role_label' => 'Printers'],
         'finishing'  => ['label' => 'Finishing',  'role_label' => 'Dry Cleaners'],
     ];

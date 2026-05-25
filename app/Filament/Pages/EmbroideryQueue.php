@@ -10,22 +10,22 @@ use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 
-class TailorQueue extends Page
+class EmbroideryQueue extends Page
 {
-    protected string $view = 'filament.pages.tailor-queue';
-    protected static ?string $navigationLabel = 'Tailor Queue';
-    protected static ?string $title = 'Tailor Queue';
-    protected static ?int $navigationSort = 2;
+    protected string $view = 'filament.pages.embroidery-queue';
+    protected static ?string $slug = 'embroidery-queue';
+    protected static ?string $navigationLabel = 'Embroidery Queue';
+    protected static ?string $title = 'Embroidery Queue';
+    protected static ?int $navigationSort = 3;
 
-    public static function getNavigationIcon(): string { return 'heroicon-o-scissors'; }
+    public static function getNavigationIcon(): string { return 'heroicon-o-sparkles'; }
     public static function getNavigationGroup(): ?string { return 'Operations'; }
 
     public static function canAccess(): bool
     {
-        return auth()->user()?->hasAnyRole(['admin', 'tailor']);
+        return auth()->user()?->hasAnyRole(['admin', 'embroidery']);
     }
 
-    // ── Details modal state ─────────────────────────────────
     public bool $showDetailsModal    = false;
     public ?int $detailsAssignmentId = null;
 
@@ -41,13 +41,11 @@ class TailorQueue extends Page
         $this->detailsAssignmentId = null;
     }
 
-    // ── Admin header action: toggle customer contact visibility ──
     protected function getHeaderActions(): array
     {
         if (! auth()->user()?->hasRole('admin')) return [];
 
         $showContact = AppSetting::bool('tailor_queue_show_customer_contact', false);
-
         return [
             Action::make('toggleContact')
                 ->label($showContact ? 'Hide Customer Contact Info' : 'Show Customer Contact Info')
@@ -55,8 +53,7 @@ class TailorQueue extends Page
                 ->color($showContact ? 'gray' : 'success')
                 ->action(function () use ($showContact) {
                     AppSetting::set('tailor_queue_show_customer_contact', $showContact ? '0' : '1');
-                    $label = $showContact ? 'Contact info hidden from tailors.' : 'Contact info now visible to tailors.';
-                    Notification::make()->title($label)->success()->send();
+                    Notification::make()->title($showContact ? 'Contact info hidden.' : 'Contact info now visible.')->success()->send();
                 }),
         ];
     }
@@ -70,7 +67,7 @@ class TailorQueue extends Page
         ])
             ->where('assigned_to', auth()->id())
             ->where('status', '!=', 'complete')
-            ->whereHas('orderItem', fn ($q) => $q->where('item_stage', 'sewing'))
+            ->whereHas('orderItem', fn ($q) => $q->where('item_stage', 'embroidery'))
             ->latest('assigned_at')
             ->get();
     }
@@ -104,9 +101,7 @@ class TailorQueue extends Page
                 ->sendToDatabase($cashiers);
         }
 
-        if ($this->showDetailsModal) {
-            $this->closeDetailsModal();
-        }
+        if ($this->showDetailsModal) $this->closeDetailsModal();
 
         Notification::make()->title("Done — advanced to {$nextLabel}.")->success()->send();
     }

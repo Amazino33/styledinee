@@ -13,7 +13,7 @@ class MyQueueWidget extends Widget
 
     public static function canView(): bool
     {
-        return auth()->user()?->hasAnyRole(['tailor', 'printer', 'dry_cleaner']);
+        return auth()->user()?->hasAnyRole(['tailor', 'embroidery', 'printer', 'dry_cleaner']);
     }
 
     protected function getViewData(): array

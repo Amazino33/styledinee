@@ -45,7 +45,7 @@ class OrderItem extends Model
     // Stage → role mapping (used by Production Tracker)
     public const STAGE_ROLES = [
         'sewing'     => 'tailor',
-        'embroidery' => 'tailor',
+        'embroidery' => 'embroidery',
         'printing'   => 'printer',
         'finishing'  => 'dry_cleaner',
     ];

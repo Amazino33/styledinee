@@ -1,7 +1,12 @@
 <?php
 
 use App\Http\Controllers\FrontendController;
+use App\Http\Controllers\PrintOrderItemController;
 use Illuminate\Support\Facades\Route;
+
+Route::middleware('auth')->group(function () {
+    Route::get('/print/order-item/{id}', PrintOrderItemController::class)->name('print.order-item');
+});
 
 Route::get('/',          [FrontendController::class, 'home'])->name('home');
 Route::get('/services',  [FrontendController::class, 'services'])->name('services');
