@@ -494,7 +494,7 @@ class Pos extends Page
         if ($this->customerAddress) $fillable['address']  = $this->customerAddress;
 
         $customer = Customer::updateOrCreate(
-            ['phone' => $this->customerPhone],
+            ['phone' => Customer::normalizePhone($this->customerPhone)],
             $fillable
         );
         $this->customerId = $customer->id;
@@ -587,7 +587,7 @@ class Pos extends Page
             $fillable = ['name' => $this->customerName];
             if ($this->customerEmail)   $fillable['email']   = $this->customerEmail;
             if ($this->customerAddress) $fillable['address']  = $this->customerAddress;
-            $customer = Customer::updateOrCreate(['phone' => $this->customerPhone], $fillable);
+            $customer = Customer::updateOrCreate(['phone' => Customer::normalizePhone($this->customerPhone)], $fillable);
         }
 
         $order = Order::create([
