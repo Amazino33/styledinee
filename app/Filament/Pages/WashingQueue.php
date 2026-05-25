@@ -9,13 +9,10 @@ use Filament\Pages\Page;
 
 class WashingQueue extends Page
 {
-    protected string $view = 'filament.pages.finishing-queue';
-    protected static ?string $navigationLabel = 'Finishing Queue';
-    protected static ?string $title = 'Finishing Queue';
-    protected static ?int $navigationSort = 3;
-
-    public static function getNavigationIcon(): string { return 'heroicon-o-sparkles'; }
-    public static function getNavigationGroup(): ?string { return 'Operations'; }
+    protected string $view = 'filament.pages.washing-queue';
+    protected static ?string $navigationLabel = 'Washing Queue';
+    protected static ?string $title = 'Washing Queue';
+    protected static bool $shouldRegisterNavigation = false;
 
     public static function canAccess(): bool
     {
