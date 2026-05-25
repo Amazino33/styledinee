@@ -14,7 +14,13 @@ echo "==> Running migrations..."
 $ARTISAN migrate --force
 
 echo "==> Linking storage..."
-$ARTISAN storage:link --force 2>/dev/null || true
+STORAGE_LINK="$(pwd)/public/storage"
+if [ ! -L "$STORAGE_LINK" ]; then
+    ln -s "$(pwd)/storage/app/public" "$STORAGE_LINK"
+    echo "    Symlink created."
+else
+    echo "    Symlink already exists."
+fi
 
 echo "==> Clearing caches..."
 $ARTISAN view:clear
