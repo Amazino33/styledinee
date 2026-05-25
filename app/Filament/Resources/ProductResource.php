@@ -48,42 +48,29 @@ class ProductResource extends Resource
                     ->required()
                     ->unique(Product::class, 'slug', ignoreRecord: true),
 
-                Select::make('category')
-                    ->options([
-                        'fabric'     => 'Fabric',
-                        'accessory'  => 'Accessory',
-                        'ready_made' => 'Ready-Made',
-                        'garment'    => 'Garment',
-                    ]),
-
                 Select::make('product_type')
                     ->label('Product Type')
                     ->options([
                         'ready_made' => 'Ready-Made',
+                        'accessory'  => 'Accessory',
                         'embroidery' => 'Embroidery',
                         'printing'   => 'Printing',
                         'fabric'     => 'Fabric',
-                        'accessory'  => 'Accessory',
                     ])
                     ->default('ready_made')
                     ->required()
-                    ->live(),
-
-                Select::make('production_type')
-                    ->label('Requires Production')
-                    ->options([
-                        'ready_made' => 'No (ready-made)',
-                        'production' => 'Yes (tailoring/production)',
-                    ])
-                    ->default('ready_made')
-                    ->required()
-                    ->live(),
+                    ->live()
+                    ->afterStateUpdated(function (string $state, Set $set) {
+                        $needsProduction = ! in_array($state, ['ready_made', 'accessory']);
+                        $set('production_type', $needsProduction ? 'production' : 'ready_made');
+                        $set('is_embroidery', $state === 'embroidery');
+                    }),
 
                 TextInput::make('estimated_production_hours')
                     ->label('Est. Production Hours')
                     ->numeric()
                     ->minValue(1)
-                    ->visible(fn ($get) => $get('production_type') === 'production'),
+                    ->visible(fn ($get) => ! in_array($get('product_type'), ['ready_made', 'accessory'])),
 
                 TextInput::make('price')
                     ->required()
@@ -109,7 +96,7 @@ class ProductResource extends Resource
                     ->label('Is Embroidery Product')
                     ->helperText('When set, orders containing this item will include the embroidery stage.')
                     ->default(false)
-                    ->visible(fn ($get) => $get('production_type') === 'production'),
+                    ->visible(fn ($get) => ! in_array($get('product_type'), ['ready_made', 'accessory'])),
                 TextInput::make('sort_order')->numeric()->default(0),
             ])->columns(2),
 
@@ -128,7 +115,7 @@ class ProductResource extends Resource
                         ->columns(3)
                         ->searchable(),
                 ])
-                ->visible(fn ($get) => $get('production_type') === 'production')
+                ->visible(fn ($get) => ! in_array($get('product_type'), ['ready_made', 'accessory']))
                 ->collapsed(),
 
             Section::make('Bill of Materials (BOM)')
@@ -157,7 +144,7 @@ class ProductResource extends Resource
                         ->defaultItems(0)
                         ->addActionLabel('Add Material'),
                 ])
-                ->visible(fn ($get) => $get('production_type') === 'production')
+                ->visible(fn ($get) => ! in_array($get('product_type'), ['ready_made', 'accessory']))
                 ->collapsed(),
         ]);
     }
@@ -168,24 +155,20 @@ class ProductResource extends Resource
             ->columns([
                 Tables\Columns\ImageColumn::make('image')->square(),
                 Tables\Columns\TextColumn::make('name')->searchable()->sortable(),
-                Tables\Columns\TextColumn::make('category')->badge(),
-                Tables\Columns\TextColumn::make('production_type')->badge()
-                    ->color(fn ($state) => $state === 'production' ? 'warning' : 'success'),
+                Tables\Columns\TextColumn::make('product_type')->badge()
+                    ->color(fn ($state) => in_array($state, ['ready_made', 'accessory']) ? 'success' : 'warning'),
                 Tables\Columns\TextColumn::make('price')->money('NGN')->sortable(),
                 Tables\Columns\TextColumn::make('stock_quantity')->sortable(),
                 Tables\Columns\IconColumn::make('is_active')->boolean(),
                 Tables\Columns\IconColumn::make('is_embroidery')->boolean()->label('Embroidery'),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('category')->options([
-                    'fabric'     => 'Fabric',
+                Tables\Filters\SelectFilter::make('product_type')->options([
+                    'ready_made' => 'Ready-Made',
                     'accessory'  => 'Accessory',
-                    'ready_made' => 'Ready-Made',
-                    'garment'    => 'Garment',
-                ]),
-                Tables\Filters\SelectFilter::make('production_type')->options([
-                    'ready_made' => 'Ready-Made',
-                    'production' => 'Production',
+                    'embroidery' => 'Embroidery',
+                    'printing'   => 'Printing',
+                    'fabric'     => 'Fabric',
                 ]),
             ])
             ->actions([\Filament\Actions\EditAction::make()])
