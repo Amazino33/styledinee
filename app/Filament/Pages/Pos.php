@@ -58,6 +58,39 @@ class Pos extends Page
     // ── Product Grid State ─────────────────────────────────
     public string $search = '';
 
+    // ── Variant Picker Modal (ready-made products with variants) ──
+    public bool  $showVariantModal          = false;
+    public ?int  $variantModalProductId     = null;
+    public ?int  $variantModalSelectedId    = null;
+
+    public function openVariantModal(int $productId): void
+    {
+        $this->variantModalProductId  = $productId;
+        $this->variantModalSelectedId = null;
+        $this->showVariantModal       = true;
+    }
+
+    public function closeVariantModal(): void
+    {
+        $this->showVariantModal      = false;
+        $this->variantModalProductId = null;
+        $this->variantModalSelectedId = null;
+    }
+
+    public function confirmVariantSelection(): void
+    {
+        $product = Product::with(['variants' => fn ($q) => $q->where('is_active', true)])
+            ->find($this->variantModalProductId);
+        if (! $product) { $this->closeVariantModal(); return; }
+
+        $variant = $this->variantModalSelectedId
+            ? $product->variants->firstWhere('id', $this->variantModalSelectedId)
+            : null;
+
+        $this->addProductToCart($product, $variant);
+        $this->closeVariantModal();
+    }
+
     // ── Production Modal State ─────────────────────────────
     public bool   $showProductModal = false;
     public ?int   $modalProductId   = null;
@@ -109,54 +142,63 @@ class Pos extends Page
     // ── Product Click Handler ──────────────────────────────
     public function selectProduct(int $productId): void
     {
-        $product = Product::find($productId);
+        $product = Product::with(['variants' => fn ($q) => $q->where('is_active', true)])
+            ->find($productId);
         if (! $product) return;
 
         if ($product->requiresProduction()) {
             $this->openProductionModal($productId);
+        } elseif ($product->variants->isNotEmpty()) {
+            $this->openVariantModal($productId);
         } else {
             $this->addProductToCart($product);
         }
     }
 
-    private function addProductToCart(Product $product): void
+    private function addProductToCart(Product $product, ?\App\Models\ProductVariant $variant = null): void
     {
-        $price = (float) $product->price;
+        $price = (float) $product->price + (float) ($variant?->price_adjustment ?? 0);
 
-        // If already in the cart as a ready-made item, just increment qty
+        // If same product+variant already in cart, just increment qty
         foreach ($this->items as $idx => $item) {
             if (
                 ($item['product_id'] ?? null) === $product->id &&
-                ($item['production_type'] ?? 'ready_made') === 'ready_made' &&
-                ! empty(trim($item['description'] ?? ''))
+                ($item['variant_id'] ?? null) === ($variant?->id) &&
+                ($item['production_type'] ?? 'ready_made') === 'ready_made'
             ) {
                 $items = $this->items;
-                $items[$idx]['qty']     = ($items[$idx]['qty'] ?? 1) + 1;
+                $items[$idx]['qty']      = ($items[$idx]['qty'] ?? 1) + 1;
                 $items[$idx]['subtotal'] = round($items[$idx]['qty'] * $price, 2);
                 $this->items = $items;
                 return;
             }
         }
 
-        // Replace the last blank item if present, otherwise append
+        // Replace last blank item if present, otherwise append
         $lastIdx = array_key_last($this->items);
         if ($lastIdx !== null && empty(trim($this->items[$lastIdx]['description'] ?? ''))) {
             $items = $this->items;
-            $items[$lastIdx] = $this->makeCartItem($product, $price);
+            $items[$lastIdx] = $this->makeCartItem($product, $price, $variant);
             $this->items = $items;
         } else {
-            $this->items[] = $this->makeCartItem($product, $price);
+            $this->items[] = $this->makeCartItem($product, $price, $variant);
         }
     }
 
-    private function makeCartItem(Product $product, float $price): array
+    private function makeCartItem(Product $product, float $price, ?\App\Models\ProductVariant $variant = null): array
     {
+        $description = $product->name;
+        if ($variant) {
+            $description .= ' — ' . ucfirst($variant->variant_type) . ': ' . $variant->variant_value;
+        }
+
         return [
-            'description'          => $product->name,
+            'description'          => $description,
             'qty'                  => 1,
             'unit_price'           => $price,
             'subtotal'             => $price,
             'product_id'           => $product->id,
+            'variant_id'           => $variant?->id,
             'production_type'      => $product->production_type,
             'production_path_key'  => 'none',
             'customer_id'          => null,
@@ -305,7 +347,37 @@ class Pos extends Page
         }
     }
 
-    // Steps: 1 = customer/variant, 2 = design, 3 = measurements (if any), 4 = confirm
+    public function getCustomerSavedMeasurements(): \Illuminate\Support\Collection
+    {
+        if (! $this->modalCustomerId) return collect();
+
+        return \App\Models\CustomerMeasurement::with('product')
+            ->where('customer_id', $this->modalCustomerId)
+            ->whereNotNull('measurements')
+            ->get()
+            ->filter(fn ($m) => ! empty($m->measurements));
+    }
+
+    public function loadFromSavedMeasurement(int $measurementId): void
+    {
+        $saved = \App\Models\CustomerMeasurement::find($measurementId);
+        if (! $saved || $saved->customer_id !== $this->modalCustomerId) return;
+
+        $product  = $this->getModalProduct();
+        $fieldIds = $product?->measurementTemplate?->fields ?? [];
+
+        $measurements = $this->modalMeasurements;
+        foreach ($fieldIds as $fieldId) {
+            if (isset($saved->measurements[$fieldId])) {
+                $measurements[$fieldId] = $saved->measurements[$fieldId];
+            }
+        }
+        $this->modalMeasurements = $measurements;
+
+        Notification::make()->title('Measurements loaded.')->success()->send();
+    }
+
+    // Steps: 1 = customer/variant, 2 = measurements, 3 = design, 4 = confirm
     public function modalNext(): void
     {
         if ($this->modalStep === 1) {
@@ -314,13 +386,35 @@ class Pos extends Page
                 return;
             }
         }
+
         $product   = $this->getModalProduct();
         $hasFields = $product && $product->measurementTemplate && ! empty($product->measurementTemplate->fields);
 
-        if ($this->modalStep === 2 && ! $hasFields) {
-            $this->modalStep = 4; // skip measurements
+        if ($this->modalStep === 1 && ! $hasFields) {
+            $this->modalStep = 3; // skip measurements step
             return;
         }
+
+        if ($this->modalStep === 2 && $hasFields) {
+            $fieldIds = $product->measurementTemplate->fields;
+            $missing  = \App\Models\MeasurementField::whereIn('id', $fieldIds)
+                ->orderBy('label')
+                ->get()
+                ->filter(fn ($f) => ! isset($this->modalMeasurements[$f->id]) ||
+                                    $this->modalMeasurements[$f->id] === '' ||
+                                    $this->modalMeasurements[$f->id] === null)
+                ->pluck('label');
+
+            if ($missing->isNotEmpty()) {
+                Notification::make()
+                    ->title('Missing measurements')
+                    ->body('Please fill in: ' . $missing->join(', ') . '.')
+                    ->danger()
+                    ->send();
+                return;
+            }
+        }
+
         $this->modalStep = min(4, $this->modalStep + 1);
     }
 
@@ -329,8 +423,8 @@ class Pos extends Page
         $product   = $this->getModalProduct();
         $hasFields = $product && $product->measurementTemplate && ! empty($product->measurementTemplate->fields);
 
-        if ($this->modalStep === 4 && ! $hasFields) {
-            $this->modalStep = 2; // skip back over measurements
+        if ($this->modalStep === 3 && ! $hasFields) {
+            $this->modalStep = 1; // skip back over measurements
             return;
         }
         $this->modalStep = max(1, $this->modalStep - 1);
@@ -689,6 +783,7 @@ class Pos extends Page
             'notes', 'items', 'amountPaid', 'completedOrderId', 'showReceipt',
             'customerId', 'estimatedCompletionDate', 'search', 'showProductModal', 'modalProductId',
             'modalDesignNotes', 'modalDesignFile', 'showCustomerModal', 'processAfterCustomer',
+            'showVariantModal', 'variantModalProductId', 'variantModalSelectedId',
         ]);
         $this->orderType     = 'tailoring';
         $this->paymentMethod = 'cash';

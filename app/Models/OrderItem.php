@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\OrderStatusLog;
 use Illuminate\Database\Eloquent\Model;
 
 class OrderItem extends Model
@@ -126,5 +127,38 @@ class OrderItem extends Model
         if ($current === false) return null;
 
         return $this->production_path[$current + 1] ?? null;
+    }
+
+    public function advanceToNextStage(int $actorId): void
+    {
+        $next = $this->nextStage();
+        if (! $next) return;
+
+        $this->activeAssignment?->update([
+            'status'       => 'complete',
+            'completed_at' => now(),
+        ]);
+
+        $this->update([
+            'item_stage'        => $next,
+            'stage_updated_at'  => now(),
+            'staff_marked_done' => false,
+            'staff_done_at'     => null,
+            'staff_done_by'     => null,
+        ]);
+
+        $order = $this->order;
+        if ($order) {
+            $order->syncStatusFromItems();
+
+            OrderStatusLog::create([
+                'order_id'      => $order->id,
+                'order_item_id' => $this->id,
+                'changed_by'    => $actorId,
+                'status'        => $next,
+                'notes'         => 'Stage advanced to ' . (self::PRODUCTION_STAGES[$next] ?? ucfirst($next)) . '.',
+                'is_published'  => false,
+            ]);
+        }
     }
 }

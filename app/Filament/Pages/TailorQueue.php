@@ -4,6 +4,7 @@ namespace App\Filament\Pages;
 
 use App\Models\AppSetting;
 use App\Models\OrderAssignment;
+use App\Models\OrderItem;
 use App\Models\User;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
@@ -87,14 +88,18 @@ class TailorQueue extends Page
             'staff_done_by'     => auth()->id(),
         ]);
 
+        $next = $item->nextStage();
+        $item->advanceToNextStage(auth()->id());
+
         $order     = $assignment->order;
         $staffName = auth()->user()->name;
+        $nextLabel = $next ? (OrderItem::PRODUCTION_STAGES[$next] ?? ucfirst($next)) : 'Ready';
 
         $cashiers = User::role('cashier')->get();
         if ($cashiers->isNotEmpty()) {
             Notification::make()
-                ->title('Item Ready for Next Stage')
-                ->body("Order {$order?->reference} — {$item->description} marked done by {$staffName}.")
+                ->title('Stage Advanced')
+                ->body("Order {$order?->reference} — {$item->description} → {$nextLabel} (by {$staffName}).")
                 ->sendToDatabase($cashiers);
         }
 
@@ -102,6 +107,6 @@ class TailorQueue extends Page
             $this->closeDetailsModal();
         }
 
-        Notification::make()->title('Marked as done — cashier notified.')->success()->send();
+        Notification::make()->title("Done — advanced to {$nextLabel}.")->success()->send();
     }
 }

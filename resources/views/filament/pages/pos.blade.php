@@ -775,6 +775,45 @@
 
 </div>{{-- /pos-shell --}}
 
+{{-- ═══════════════ VARIANT PICKER MODAL ═══════════════ --}}
+@if($showVariantModal)
+@php $vprod = \App\Models\Product::with(['variants' => fn($q) => $q->where('is_active', true)->orderBy('variant_type')])->find($variantModalProductId); @endphp
+@if($vprod)
+<div class="modal-backdrop" wire:click.self="closeVariantModal">
+    <div class="modal-box" style="max-width:380px;">
+        <div class="modal-head">
+            <span class="modal-title">{{ $vprod->name }}</span>
+            <button wire:click="closeVariantModal" class="modal-close">✕</button>
+        </div>
+        <div class="modal-body">
+            <p style="font-size:.8rem;color:var(--muted);margin-bottom:.85rem;">Select a variant to add to the order.</p>
+            <div style="display:flex;flex-direction:column;gap:.5rem;">
+                @foreach($vprod->variants as $v)
+                <label style="display:flex;align-items:center;gap:.65rem;padding:.6rem .75rem;border:1px solid var(--border);border-radius:8px;cursor:pointer;{{ $variantModalSelectedId == $v->id ? 'border-color:var(--gold);background:rgba(201,168,76,.08);' : '' }}">
+                    <input type="radio" wire:model.live="variantModalSelectedId" value="{{ $v->id }}" style="accent-color:var(--gold);">
+                    <span style="flex:1;font-size:.88rem;font-weight:600;color:var(--text);">
+                        {{ ucfirst($v->variant_type) }}: {{ $v->variant_value }}
+                    </span>
+                    @if($v->price_adjustment != 0)
+                    <span style="font-size:.8rem;font-weight:700;color:{{ $v->price_adjustment > 0 ? '#059669' : '#dc2626' }};">
+                        {{ $v->price_adjustment > 0 ? '+' : '' }}₦{{ number_format($v->price_adjustment, 0) }}
+                    </span>
+                    @endif
+                </label>
+                @endforeach
+            </div>
+        </div>
+        <div class="modal-foot">
+            <button wire:click="closeVariantModal" class="mbtn mbtn-ghost">Cancel</button>
+            <button wire:click="confirmVariantSelection" class="mbtn mbtn-primary" {{ ! $variantModalSelectedId ? 'disabled' : '' }}>
+                Add to Order
+            </button>
+        </div>
+    </div>
+</div>
+@endif
+@endif
+
 {{-- ═══════════════ CUSTOMER MODAL ═══════════════ --}}
 @if($showCustomerModal)
 <div class="modal-backdrop" wire:click.self="closeCustomerModal">
@@ -859,14 +898,14 @@
                 {{-- 1: Customer --}}
                 <div class="step-dot {{ $modalStep>=1?($modalStep>1?'done':'active'):'' }}">{{ $modalStep>1?'✓':'1' }}</div>
                 <div class="step-line {{ $modalStep>1?'done':'' }}"></div>
-                {{-- 2: Design --}}
+                {{-- 2: Measurements (conditional) --}}
+                @if($hasFields)
                 <div class="step-dot {{ $modalStep>=2?($modalStep>2?'done':'active'):'' }}">{{ $modalStep>2?'✓':'2' }}</div>
                 <div class="step-line {{ $modalStep>2?'done':'' }}"></div>
-                {{-- 3: Measurements (conditional) --}}
-                @if($hasFields)
-                <div class="step-dot {{ $modalStep>=3?($modalStep>3?'done':'active'):'' }}">{{ $modalStep>3?'✓':'3' }}</div>
-                <div class="step-line {{ $modalStep>3?'done':'' }}"></div>
                 @endif
+                {{-- 3: Design --}}
+                <div class="step-dot {{ $modalStep>=3?($modalStep>3?'done':'active'):'' }}">{{ $modalStep>3?'✓':($hasFields?'3':'2') }}</div>
+                <div class="step-line {{ $modalStep>3?'done':'' }}"></div>
                 {{-- 4: Confirm --}}
                 <div class="step-dot {{ $modalStep===4?'active':'' }}">{{ $hasFields?'4':'3' }}</div>
             </div>
@@ -920,8 +959,67 @@
             @endif
             @endif
 
-            {{-- STEP 2: Design --}}
-            @if ($modalStep === 2)
+            {{-- STEP 2: Measurements --}}
+            @if ($modalStep === 2 && $mprod->measurementTemplate && !empty($mprod->measurementTemplate->fields))
+            @php
+                $fieldIds    = $mprod->measurementTemplate->fields ?? [];
+                $measFields  = \App\Models\MeasurementField::whereIn('id', $fieldIds)->orderBy('label')->get()->keyBy('id');
+                $savedSets   = $this->getCustomerSavedMeasurements();
+            @endphp
+
+            @if($savedSets->isNotEmpty())
+            <div x-data="{ open: false, search: '' }" style="position:relative;margin-bottom:1rem;">
+                <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:.35rem;">
+                    Load from saved measurements
+                </div>
+                {{-- Trigger --}}
+                <div @click="open=!open" style="display:flex;align-items:center;justify-content:space-between;padding:.45rem .7rem;border:1px solid var(--border);border-radius:7px;background:var(--bg2);cursor:pointer;user-select:none;">
+                    <span style="font-size:.82rem;color:var(--text3);">Select a previous measurement set…</span>
+                    <span :style="open ? 'transform:rotate(180deg);display:inline-block' : 'display:inline-block'" style="font-size:.75rem;color:var(--text3);line-height:1;transition:transform .15s;flex-shrink:0;">&#x25BE;</span>
+                </div>
+                {{-- Dropdown --}}
+                <div x-show="open" @click.outside="open=false" x-transition
+                    style="position:absolute;z-index:50;left:0;right:0;top:calc(100% + 4px);background:var(--bg);border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.15);overflow:hidden;">
+                    {{-- Search --}}
+                    <div style="padding:.5rem .6rem;border-bottom:1px solid var(--border);">
+                        <input x-model="search" type="text" placeholder="Search by product name…" autofocus
+                            style="width:100%;padding:.38rem .55rem;border:1px solid var(--border);border-radius:6px;background:var(--bg2);font-size:.82rem;color:var(--text);font-family:inherit;outline:none;">
+                    </div>
+                    {{-- Options --}}
+                    <div style="max-height:200px;overflow-y:auto;">
+                        @foreach($savedSets as $ss)
+                        @php $productName = $ss->product?->name ?? 'Product #'.$ss->product_id; @endphp
+                        <div
+                            x-show="search==='' || '{{ strtolower($productName) }}'.includes(search.toLowerCase())"
+                            wire:click="loadFromSavedMeasurement({{ $ss->id }})"
+                            @click="open=false; search=''"
+                            style="display:flex;align-items:center;justify-content:space-between;padding:.55rem .75rem;cursor:pointer;font-size:.83rem;color:var(--text);gap:.5rem;"
+                            onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background=''">
+                            <span style="font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ $productName }}</span>
+                            <span style="font-size:.72rem;color:var(--muted);white-space:nowrap;flex-shrink:0;">{{ count($ss->measurements) }} fields · {{ $ss->updated_at->format('d M Y') }}</span>
+                        </div>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+            @endif
+
+            <p class="modal-desc">Enter measurements for <strong>{{ $modalCustomerName }}</strong>.</p>
+            <div class="meas-grid">
+                @foreach($fieldIds as $fieldId)
+                @php $mf = $measFields[$fieldId] ?? null; @endphp
+                @if($mf)
+                <div class="mfield">
+                    <label>{{ $mf->label }}</label>
+                    <input wire:model.live="modalMeasurements.{{ $mf->id }}" type="number" step="0.1" placeholder="0">
+                </div>
+                @endif
+                @endforeach
+            </div>
+            @endif
+
+            {{-- STEP 3: Design --}}
+            @if ($modalStep === 3)
             @php
                 $pathHint = match(true) {
                     str_contains($mprod->product_type ?? '', 'embroidery') => 'embroidery',
@@ -943,7 +1041,7 @@
                 <textarea
                     wire:model.live="modalDesignNotes"
                     rows="3"
-                    placeholder="E.g. Blue &amp; white, chest placement, 10cm wide. Or paste a description of the pattern…"
+                    placeholder="E.g. Blue &amp; white, chest placement, 10cm wide…"
                     style="width:100%;margin-top:.3rem;padding:.45rem .6rem;border:1px solid var(--border2);border-radius:7px;background:var(--bg2);font-size:.83rem;color:var(--text);font-family:inherit;resize:vertical;outline:none;"></textarea>
             </div>
 
@@ -974,28 +1072,6 @@
                     </span>
                 </div>
                 @endif
-            </div>
-            @endif
-
-            {{-- STEP 3: Measurements --}}
-            @if ($modalStep === 3 && $mprod->measurementTemplate && !empty($mprod->measurementTemplate->fields))
-            @php
-                $fieldIds   = $mprod->measurementTemplate->fields ?? [];
-                $measFields = \App\Models\MeasurementField::whereIn('id', $fieldIds)->orderBy('label')->get()->keyBy('id');
-            @endphp
-            <p class="modal-desc">
-                Enter measurements for <strong>{{ $modalCustomerName }}</strong>.
-            </p>
-            <div class="meas-grid">
-                @foreach($fieldIds as $fieldId)
-                @php $mf = $measFields[$fieldId] ?? null; @endphp
-                @if($mf)
-                <div class="mfield">
-                    <label>{{ $mf->label }}</label>
-                    <input wire:model.live="modalMeasurements.{{ $mf->id }}" type="number" step="0.1" placeholder="0">
-                </div>
-                @endif
-                @endforeach
             </div>
             @endif
 

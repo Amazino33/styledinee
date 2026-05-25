@@ -4,6 +4,7 @@ namespace App\Filament\Pages;
 
 use App\Models\AppSetting;
 use App\Models\OrderAssignment;
+use App\Models\OrderItem;
 use App\Models\User;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
@@ -82,19 +83,23 @@ class PrintingQueue extends Page
             'staff_done_by'     => auth()->id(),
         ]);
 
+        $next = $item->nextStage();
+        $item->advanceToNextStage(auth()->id());
+
         $order     = $assignment->order;
         $staffName = auth()->user()->name;
+        $nextLabel = $next ? (OrderItem::PRODUCTION_STAGES[$next] ?? ucfirst($next)) : 'Ready';
 
         $cashiers = User::role('cashier')->get();
         if ($cashiers->isNotEmpty()) {
             Notification::make()
-                ->title('Print Job Ready')
-                ->body("Order {$order?->reference} — {$item->description} printing done by {$staffName}.")
+                ->title('Stage Advanced')
+                ->body("Order {$order?->reference} — {$item->description} → {$nextLabel} (by {$staffName}).")
                 ->sendToDatabase($cashiers);
         }
 
         if ($this->showDetailsModal) $this->closeDetailsModal();
 
-        Notification::make()->title('Print marked done — cashier notified.')->success()->send();
+        Notification::make()->title("Done — advanced to {$nextLabel}.")->success()->send();
     }
 }

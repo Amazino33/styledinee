@@ -144,33 +144,7 @@ class ProductionTracker extends Page
         $next = $item->nextStage();
         if (! $next) return;
 
-        // Close the completed assignment so the next stage starts unassigned
-        $item->activeAssignment?->update([
-            'status'       => 'complete',
-            'completed_at' => now(),
-        ]);
-
-        $item->update([
-            'item_stage'        => $next,
-            'stage_updated_at'  => now(),
-            'staff_marked_done' => false,
-            'staff_done_at'     => null,
-            'staff_done_by'     => null,
-        ]);
-
-        $order = $item->order;
-        if ($order) {
-            $order->syncStatusFromItems();
-
-            OrderStatusLog::create([
-                'order_id'      => $order->id,
-                'order_item_id' => $item->id,
-                'changed_by'    => auth()->id(),
-                'status'        => $next,
-                'notes'         => 'Stage advanced to ' . (OrderItem::PRODUCTION_STAGES[$next] ?? ucfirst($next)) . '.',
-                'is_published'  => false,
-            ]);
-        }
+        $item->advanceToNextStage(auth()->id());
 
         $nextLabel = OrderItem::PRODUCTION_STAGES[$next] ?? ucfirst($next);
         Notification::make()->title("{$item->description} → {$nextLabel}")->success()->send();
