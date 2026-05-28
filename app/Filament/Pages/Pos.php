@@ -751,6 +751,11 @@ class Pos extends Page
             }
         }
 
+        // Non-production delivery orders have nothing to produce — advance to ready now
+        if (! $hasProduction) {
+            $order->syncStatusFromItems();
+        }
+
         OrderStatusLog::create([
             'order_id'      => $order->id,
             'changed_by'    => auth()->id(),

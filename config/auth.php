@@ -42,6 +42,16 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+        // Web session guard — used by Livewire customer portal
+        'customer_web' => [
+            'driver'   => 'session',
+            'provider' => 'customers',
+        ],
+        // API token guard — used by the REST API (Sanctum)
+        'customer' => [
+            'driver'   => 'sanctum',
+            'provider' => 'customers',
+        ],
     ],
 
     /*
@@ -65,6 +75,10 @@ return [
         'users' => [
             'driver' => 'eloquent',
             'model' => env('AUTH_MODEL', User::class),
+        ],
+        'customers' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\Customer::class,
         ],
 
         // 'users' => [

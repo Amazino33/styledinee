@@ -19,8 +19,9 @@ class DeliveryQueueWidget extends Widget
     protected function getViewData(): array
     {
         $orders = Order::with('customer')
+            ->where('delivery_type', 'delivery')
             ->where('delivery_user_id', auth()->id())
-            ->whereIn('status', ['ready', 'in_progress'])
+            ->whereIn('status', ['ready', 'dispatched'])
             ->latest('updated_at')
             ->get();
 

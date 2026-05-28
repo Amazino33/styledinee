@@ -646,6 +646,23 @@
             </button>
             @endif
 
+            {{-- Delivery / Pickup toggle --}}
+            <div style="display:flex;gap:.5rem;margin-bottom:.5rem;">
+                <button wire:click="$set('deliveryType','pickup')"
+                    style="flex:1;padding:.45rem;border-radius:.4rem;font-size:.8rem;font-weight:600;cursor:pointer;border:2px solid {{ $deliveryType==='pickup'?'#c9a84c':'#d1d5db' }};background:{{ $deliveryType==='pickup'?'#fef9ee':'#f9fafb' }};color:{{ $deliveryType==='pickup'?'#92740a':'#6b7280' }};">
+                    🏪 Walk-in Pickup
+                </button>
+                <button wire:click="$set('deliveryType','delivery')"
+                    style="flex:1;padding:.45rem;border-radius:.4rem;font-size:.8rem;font-weight:600;cursor:pointer;border:2px solid {{ $deliveryType==='delivery'?'#c9a84c':'#d1d5db' }};background:{{ $deliveryType==='delivery'?'#fef9ee':'#f9fafb' }};color:{{ $deliveryType==='delivery'?'#92740a':'#6b7280' }};">
+                    🚚 Home Delivery
+                </button>
+            </div>
+            @if($deliveryType === 'delivery')
+            <div class="pf" style="margin-bottom:.5rem;">
+                <input wire:model.live="customerAddress" type="text" placeholder="Delivery address…" class="notes-input">
+            </div>
+            @endif
+
             <div class="pf" style="margin-bottom:.5rem;">
                 <label class="plbl" style="margin-bottom:.3rem; display:block;">Notes</label>
                 <input wire:model.live="notes" type="text" placeholder="Special instructions, fabric preference…" class="notes-input">

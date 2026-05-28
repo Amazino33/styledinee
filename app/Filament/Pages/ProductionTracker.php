@@ -6,6 +6,7 @@ use App\Models\OrderAssignment;
 use App\Models\OrderItem;
 use App\Models\OrderStatusLog;
 use App\Models\User;
+use App\Services\NotificationService;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 
@@ -200,7 +201,7 @@ class ProductionTracker extends Page
             $staffMember = User::find($this->assignStaffId);
             $department  = $staffMember?->getRoleNames()->first() ?? 'tailor';
 
-            OrderAssignment::create([
+            $newAssignment = OrderAssignment::create([
                 'order_id'      => $item->order_id,
                 'order_item_id' => $item->id,
                 'assigned_to'   => $this->assignStaffId,
@@ -210,6 +211,8 @@ class ProductionTracker extends Page
                 'assigned_at'   => now(),
                 'notes'         => $this->assignNotes ?: null,
             ]);
+
+            app(NotificationService::class)->staffAssigned($newAssignment);
 
             $staffName = $staffMember?->name;
         }

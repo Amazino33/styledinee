@@ -13,11 +13,14 @@ class Order extends Model
         'type', 'status', 'notes', 'total_amount', 'amount_paid', 'payment_status',
         'pickup_date', 'delivery_date', 'estimated_completion_date',
         'delivery_type', 'delivery_notes', 'delivery_user_id',
+        'coupon_id', 'coupon_discount', 'referral_credit_used',
     ];
 
     protected $casts = [
         'total_amount'              => 'decimal:2',
         'amount_paid'               => 'decimal:2',
+        'coupon_discount'           => 'decimal:2',
+        'referral_credit_used'      => 'decimal:2',
         'pickup_date'               => 'date',
         'delivery_date'             => 'date',
         'estimated_completion_date' => 'date',
@@ -28,6 +31,28 @@ class Order extends Model
         static::creating(function (self $order) {
             if (empty($order->reference)) {
                 $order->reference = 'STD-' . strtoupper(Str::random(8));
+            }
+        });
+
+        // Auto-advance non-production orders to 'ready' when cashier confirms them.
+        // Production orders are advanced by the production pipeline instead.
+        static::updated(function (self $order) {
+            if (! $order->wasChanged('status')) return;
+
+            if ($order->status === 'confirmed') {
+                $hasProduction = $order->items()->where('production_type', 'production')->exists();
+                if (! $hasProduction) {
+                    $order->syncStatusFromItems();
+                }
+
+                // Fire referral conversion (first order only) and affiliate commission
+                try {
+                    $referral = app(\App\Services\ReferralService::class);
+                    $referral->handleFirstOrder($order);
+                    $referral->handleAffiliateCommission($order);
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::error('[Referral] ' . $e->getMessage());
+                }
             }
         });
     }
@@ -82,6 +107,16 @@ class Order extends Model
         return $this->hasMany(Payment::class);
     }
 
+    public function coupon()
+    {
+        return $this->belongsTo(Coupon::class);
+    }
+
+    public function couponUsage()
+    {
+        return $this->hasOne(CouponUsage::class);
+    }
+
     public function recordPayment(float $amount, string $method = 'cash', ?string $notes = null): Payment
     {
         return Payment::record($this, $amount, $method, $notes);
@@ -100,7 +135,16 @@ class Order extends Model
     {
         $productionItems = $this->items()->where('production_type', 'production')->get();
 
-        if ($productionItems->isEmpty()) return;
+        if ($productionItems->isEmpty()) {
+            // No production work — advance confirmed orders to ready immediately
+            if ($this->status === 'confirmed') {
+                $this->update(['status' => 'ready']);
+                try {
+                    app(\App\Services\NotificationService::class)->notifyOrderReady($this);
+                } catch (\Throwable) {}
+            }
+            return;
+        }
 
         $allDone = $productionItems->every(
             fn ($i) => in_array($i->item_stage, ['ready', 'dispatched', 'delivered'])

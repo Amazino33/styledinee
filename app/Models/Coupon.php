@@ -1,0 +1,101 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+class Coupon extends Model
+{
+    protected $fillable = [
+        'code', 'name', 'description',
+        'type', 'amount', 'max_discount_amount', 'min_order_amount',
+        'usage_limit', 'usage_limit_per_customer', 'used_count',
+        'eligibility_rule', 'eligibility_months',
+        'is_active', 'starts_at', 'expires_at',
+        'created_by',
+    ];
+
+    protected $casts = [
+        'amount'                  => 'decimal:2',
+        'max_discount_amount'     => 'decimal:2',
+        'min_order_amount'        => 'decimal:2',
+        'is_active'               => 'boolean',
+        'starts_at'               => 'datetime',
+        'expires_at'              => 'datetime',
+    ];
+
+    // ── Relationships ──────────────────────────────────────────────────────────
+
+    public function createdBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function exclusiveCustomers(): BelongsToMany
+    {
+        return $this->belongsToMany(Customer::class, 'coupon_customers');
+    }
+
+    public function usages(): HasMany
+    {
+        return $this->hasMany(CouponUsage::class);
+    }
+
+    // ── State helpers ──────────────────────────────────────────────────────────
+
+    public function isCurrentlyActive(): bool
+    {
+        if (! $this->is_active) return false;
+        if ($this->starts_at && $this->starts_at->isFuture()) return false;
+        if ($this->expires_at && $this->expires_at->isPast()) return false;
+        if ($this->usage_limit && $this->used_count >= $this->usage_limit) return false;
+
+        return true;
+    }
+
+    /**
+     * Calculate the actual discount for a given order total.
+     */
+    public function calculateDiscount(float $orderTotal): float
+    {
+        if ($this->type === 'fixed') {
+            return min((float) $this->amount, $orderTotal);
+        }
+
+        $discount = $orderTotal * ($this->amount / 100);
+
+        if ($this->max_discount_amount) {
+            $discount = min($discount, (float) $this->max_discount_amount);
+        }
+
+        return round($discount, 2);
+    }
+
+    /**
+     * Check if a customer is eligible for this coupon.
+     */
+    public function isEligibleFor(Customer $customer): bool
+    {
+        return match ($this->eligibility_rule) {
+            'public'             => true,
+            'first_order'        => $customer->orders()->doesntExist(),
+            'return_customer'    => $customer->orders()->exists(),
+            'long_time_purchaser' => $this->checkLongTimePurchaser($customer),
+            'exclusive'          => $this->exclusiveCustomers()->where('customer_id', $customer->id)->exists(),
+            default              => false,
+        };
+    }
+
+    private function checkLongTimePurchaser(Customer $customer): bool
+    {
+        $months = $this->eligibility_months ?? 3;
+        $firstOrder = $customer->orders()->oldest()->first();
+
+        if (! $firstOrder) return false;
+
+        return $firstOrder->created_at->diffInMonths(now()) >= $months;
+    }
+}

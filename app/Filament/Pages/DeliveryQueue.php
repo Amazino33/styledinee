@@ -48,6 +48,7 @@ class DeliveryQueue extends Page
     public function getOrders()
     {
         $query = Order::with(['items', 'deliveryUser', 'latestOtp'])
+            ->where('delivery_type', 'delivery')
             ->whereIn('status', ['ready', 'dispatched'])
             ->latest();
 

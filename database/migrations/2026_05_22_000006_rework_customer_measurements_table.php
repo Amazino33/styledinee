@@ -21,8 +21,12 @@ return new class extends Migration
                     $table->dropUnique('customer_measurements_customer_id_product_id_unique');
                 });
             }
-            // Disable FK checks so we don't need to know the exact constraint name
-            Schema::disableForeignKeyConstraints();
+            // Drop the FK constraint explicitly before dropping the column
+            if ($this->foreignKeyExists('customer_measurements_product_id_foreign')) {
+                Schema::table('customer_measurements', function (Blueprint $table) {
+                    $table->dropForeign('customer_measurements_product_id_foreign');
+                });
+            }
             Schema::table('customer_measurements', function (Blueprint $table) {
                 $cols = ['product_id'];
                 if (Schema::hasColumn('customer_measurements', 'values')) {
@@ -30,7 +34,6 @@ return new class extends Migration
                 }
                 $table->dropColumn($cols);
             });
-            Schema::enableForeignKeyConstraints();
         }
 
         Schema::table('customer_measurements', function (Blueprint $table) {
@@ -68,6 +71,19 @@ return new class extends Migration
             "SHOW INDEX FROM `customer_measurements` WHERE Key_name = ?", [$index]
         );
         return ! empty($indexes);
+    }
+
+    private function foreignKeyExists(string $constraintName): bool
+    {
+        $result = \Illuminate\Support\Facades\DB::select(
+            "SELECT CONSTRAINT_NAME FROM information_schema.TABLE_CONSTRAINTS
+             WHERE TABLE_SCHEMA = DATABASE()
+               AND TABLE_NAME = 'customer_measurements'
+               AND CONSTRAINT_TYPE = 'FOREIGN KEY'
+               AND CONSTRAINT_NAME = ?",
+            [$constraintName]
+        );
+        return ! empty($result);
     }
 
     public function down(): void
