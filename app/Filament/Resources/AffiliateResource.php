@@ -8,6 +8,8 @@ use App\Models\AppSetting;
 use App\Models\Customer;
 use App\Models\ReferralCreditLedger;
 use App\Services\ReferralService;
+use Filament\Actions\Action;
+use Filament\Actions\EditAction;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -124,7 +126,7 @@ class AffiliateResource extends Resource
                     ->options(['pending' => 'Pending', 'active' => 'Active', 'suspended' => 'Suspended']),
             ])
             ->actions([
-                Tables\Actions\Action::make('approve')
+                Action::make('approve')
                     ->label('Approve')
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
@@ -137,7 +139,7 @@ class AffiliateResource extends Resource
                             'approved_at' => now(),
                         ]);
                     }),
-                Tables\Actions\Action::make('approve_commission')
+                Action::make('approve_commission')
                     ->label('Approve Pending Commissions')
                     ->icon('heroicon-o-currency-dollar')
                     ->color('warning')
@@ -148,7 +150,7 @@ class AffiliateResource extends Resource
                             fn ($c) => app(ReferralService::class)->approveCommission($c, auth()->id())
                         );
                     }),
-                Tables\Actions\EditAction::make(),
+                EditAction::make(),
             ])
             ->defaultSort('created_at', 'desc');
     }
