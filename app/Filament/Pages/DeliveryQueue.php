@@ -47,9 +47,9 @@ class DeliveryQueue extends Page
     // ── Queries ────────────────────────────────────────────
     public function getOrders()
     {
-        $query = Order::with(['items', 'deliveryUser', 'latestOtp'])
+        $query = Order::with(['items', 'deliveryUser', 'handedOverBy', 'latestOtp'])
             ->where('delivery_type', 'delivery')
-            ->whereIn('status', ['ready', 'dispatched'])
+            ->whereIn('status', ['ready', 'handed_over', 'dispatched'])
             ->latest();
 
         if (auth()->user()?->hasRole('delivery')) {
@@ -116,26 +116,60 @@ class DeliveryQueue extends Page
         $this->deliveryUserId    = null;
     }
 
-    // ── Dispatch ───────────────────────────────────────────
-    public function dispatchOrder(int $orderId): void
+    // ── Step 1: Cashier confirms physical handover ─────────
+    public function confirmHandover(int $orderId): void
     {
         $order = Order::find($orderId);
         if (! $order) return;
 
-        // Delivery orders must have a delivery person assigned
-        if ($order->delivery_type === 'delivery' && ! $order->delivery_user_id) {
-            Notification::make()
-                ->title('Assign a delivery person first')
-                ->danger()
-                ->send();
+        if (! $order->delivery_user_id) {
+            Notification::make()->title('Assign a delivery person first')->danger()->send();
+            return;
+        }
+
+        $order->update([
+            'status'          => 'handed_over',
+            'handed_over_by'  => auth()->id(),
+        ]);
+
+        OrderStatusLog::create([
+            'order_id'       => $orderId,
+            'changed_by'     => auth()->id(),
+            'status'         => 'handed_over',
+            'notes'          => 'Handed over to ' . ($order->deliveryUser?->name ?? 'delivery person') . ' by ' . auth()->user()->name . '.',
+            'is_published'   => true,
+            'client_message' => 'Your order has been packed and handed to our delivery team.',
+        ]);
+
+        try {
+            $order->loadMissing('deliveryUser');
+            app(NotificationService::class)->orderHandedOver($order);
+        } catch (\Throwable) {}
+
+        Notification::make()
+            ->title("Handed over — {$order->reference}")
+            ->body("Waiting for {$order->deliveryUser?->name} to confirm collection.")
+            ->success()
+            ->send();
+    }
+
+    // ── Step 2: Delivery person confirms they collected ────
+    public function confirmCollection(int $orderId): void
+    {
+        $order = Order::find($orderId);
+        if (! $order) return;
+
+        if ($order->status !== 'handed_over') {
+            Notification::make()->title('Order is not in handed-over state.')->danger()->send();
             return;
         }
 
         $otp = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+
         DeliveryOtp::create([
             'order_id'   => $orderId,
             'otp'        => $otp,
-            'expires_at' => now()->addMinutes(30),
+            'expires_at' => now()->addHours(4),
         ]);
 
         $order->update(['status' => 'dispatched']);
@@ -145,18 +179,18 @@ class DeliveryQueue extends Page
             'order_id'       => $orderId,
             'changed_by'     => auth()->id(),
             'status'         => 'dispatched',
-            'notes'          => 'Dispatched for delivery.',
+            'notes'          => 'Collected and dispatched by ' . auth()->user()->name . '.',
             'is_published'   => true,
-            'client_message' => 'Your order is on the way! Use OTP ' . $otp . ' to confirm receipt.',
+            'client_message' => 'Your order is on the way! Use your delivery OTP to confirm receipt.',
         ]);
 
         try {
-            app(NotificationService::class)->sendDeliveryOtp($order, $otp);
+            app(NotificationService::class)->orderCollectedByRider($order, $otp);
         } catch (\Throwable) {}
 
         Notification::make()
-            ->title("Order {$order->reference} dispatched")
-            ->body("Customer OTP: {$otp}")
+            ->title("Collected — {$order->reference}")
+            ->body("Customer OTP sent. Code: {$otp}")
             ->persistent()
             ->success()
             ->send();

@@ -12,7 +12,7 @@ class Order extends Model
         'customer_name', 'customer_email', 'customer_phone', 'customer_address',
         'type', 'status', 'notes', 'total_amount', 'amount_paid', 'payment_status',
         'pickup_date', 'delivery_date', 'estimated_completion_date',
-        'delivery_type', 'delivery_notes', 'delivery_user_id',
+        'delivery_type', 'delivery_notes', 'delivery_user_id', 'handed_over_by',
         'coupon_id', 'coupon_discount', 'referral_credit_used',
     ];
 
@@ -65,6 +65,11 @@ class Order extends Model
     public function deliveryUser()
     {
         return $this->belongsTo(User::class, 'delivery_user_id');
+    }
+
+    public function handedOverBy()
+    {
+        return $this->belongsTo(User::class, 'handed_over_by');
     }
 
     public function customer()

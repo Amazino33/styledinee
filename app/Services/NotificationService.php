@@ -41,6 +41,24 @@ class NotificationService
         $this->sendEmail($order->customer_email, "Your Order is Ready – {$order->reference}", $message);
     }
 
+    public function orderHandedOver(Order $order): void
+    {
+        $deliveryName = $order->deliveryUser?->name ?? 'our delivery team';
+
+        $message = "Hi {$order->customer_name}, your order *{$order->reference}* has been packed and handed to {$deliveryName} for delivery. "
+            . "You will receive a delivery OTP once it is collected. Please keep your phone nearby.";
+
+        $this->whatsapp->send($order->customer_phone, $message);
+    }
+
+    public function orderCollectedByRider(Order $order, string $otp): void
+    {
+        $message = "Hi {$order->customer_name}, your order *{$order->reference}* is on its way! "
+            . "Show this OTP to our delivery person when they arrive: *{$otp}*\n\nValid for 4 hours. Do not share with anyone else.";
+
+        $this->whatsapp->send($order->customer_phone, $message);
+    }
+
     public function sendDeliveryOtp(Order $order, string $otp): void
     {
         $message = "Your Styledinee delivery OTP for order {$order->reference} is: *{$otp}*. "

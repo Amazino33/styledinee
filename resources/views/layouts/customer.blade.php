@@ -142,6 +142,7 @@
         .badge--confirmed  { background:#EFF6FF; color:#1D4ED8; }
         .badge--in_progress{ background:#F5F3FF; color:#7C3AED; }
         .badge--ready      { background:#F0FDF4; color:#166534; }
+        .badge--handed_over{ background:#EDE9FE; color:#6D28D9; }
         .badge--dispatched { background:#E0F2FE; color:#075985; }
         .badge--delivered  { background:#F0FDF4; color:#14532D; }
         .badge--cancelled  { background:#FEF2F2; color:#991B1B; }

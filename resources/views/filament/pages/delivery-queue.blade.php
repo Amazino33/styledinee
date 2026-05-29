@@ -33,11 +33,13 @@
 
 /* ── Status badges ── */
 .dq-badge { display:inline-flex; align-items:center; gap:.3rem; font-size:.65rem; font-weight:700; text-transform:uppercase; letter-spacing:.07em; padding:.25rem .55rem; border-radius:4px; white-space:nowrap; }
-.dq-badge-awaiting  { background:rgba(245,158,11,.12); color:#92400e; border:1px solid rgba(245,158,11,.3); }
-.dq-badge-assigned  { background:rgba(59,130,246,.1);  color:#1d4ed8; border:1px solid rgba(59,130,246,.25); }
-.dq-badge-dispatched{ background:rgba(249,115,22,.1);  color:#c2410c; border:1px solid rgba(249,115,22,.25); }
+.dq-badge-awaiting    { background:rgba(245,158,11,.12); color:#92400e; border:1px solid rgba(245,158,11,.3); }
+.dq-badge-assigned    { background:rgba(59,130,246,.1);  color:#1d4ed8; border:1px solid rgba(59,130,246,.25); }
+.dq-badge-handedover  { background:rgba(139,92,246,.1);  color:#6d28d9; border:1px solid rgba(139,92,246,.25); }
+.dq-badge-dispatched  { background:rgba(249,115,22,.1);  color:#c2410c; border:1px solid rgba(249,115,22,.25); }
 .dark .dq-badge-awaiting   { color:#fbbf24; background:rgba(245,158,11,.1);  border-color:rgba(245,158,11,.25); }
 .dark .dq-badge-assigned   { color:#93c5fd; background:rgba(59,130,246,.1);  border-color:rgba(59,130,246,.25); }
+.dark .dq-badge-handedover { color:#c4b5fd; background:rgba(139,92,246,.1);  border-color:rgba(139,92,246,.25); }
 .dark .dq-badge-dispatched { color:#fb923c; background:rgba(249,115,22,.1);  border-color:rgba(249,115,22,.25); }
 
 /* ── Action buttons ── */
@@ -53,6 +55,8 @@
 
 .dq-btn-dispatch  { border:none; background:var(--gold); color:#111827; }
 .dq-btn-dispatch:hover { background:var(--gold-h); }
+.dq-btn-collect   { border:none; background:#7c3aed; color:#fff; }
+.dq-btn-collect:hover { background:#6d28d9; }
 
 .dq-btn-verify    { border:none; background:rgba(59,130,246,.12); color:#1d4ed8; }
 .dq-btn-verify:hover { background:rgba(59,130,246,.22); }
@@ -146,8 +150,9 @@
 </style>
 
 @php
-    $orders       = $this->getOrders();
-    $isCashier    = auth()->user()?->hasAnyRole(['admin', 'cashier']);
+    $orders        = $this->getOrders();
+    $isCashier     = auth()->user()?->hasAnyRole(['admin', 'cashier']);
+    $isDelivery    = auth()->user()?->hasAnyRole(['admin', 'delivery']);
     $deliveryStaff = $isCashier ? $this->getDeliveryStaff() : [];
 @endphp
 
@@ -213,6 +218,14 @@
         <td>
             @if($order->status === 'dispatched')
                 <span class="dq-badge dq-badge-dispatched">🟠 Dispatched</span>
+                @if($hasDeliveryPerson)
+                <span class="dq-phone" style="margin-top:.3rem;">🚴 {{ $order->deliveryUser->name }}</span>
+                @endif
+            @elseif($order->status === 'handed_over')
+                <span class="dq-badge dq-badge-handedover">🟣 Handed Over</span>
+                @if($hasDeliveryPerson)
+                <span class="dq-phone" style="margin-top:.3rem;">Awaiting {{ $order->deliveryUser->name }}</span>
+                @endif
             @elseif($hasDeliveryPerson)
                 <span class="dq-badge dq-badge-assigned">🔵 {{ $order->deliveryUser->name }}</span>
             @else
@@ -222,11 +235,26 @@
 
         <td>
             <div class="dq-actions">
+
                 @if($order->status === 'dispatched')
+                    {{-- Both cashier and delivery can verify OTP --}}
                     <button wire:click="openVerify({{ $order->id }})" class="dq-btn dq-btn-verify">🔐 Verify OTP</button>
 
-                @elseif($order->status === 'ready')
+                @elseif($order->status === 'handed_over')
+                    {{-- Only the assigned delivery person (or admin) can confirm collection --}}
+                    @if($isDelivery)
+                    <button
+                        wire:click="confirmCollection({{ $order->id }})"
+                        wire:loading.attr="disabled"
+                        wire:target="confirmCollection({{ $order->id }})"
+                        class="dq-btn dq-btn-collect">
+                        ✅ Confirm Collected
+                    </button>
+                    @else
+                    <span style="font-size:.75rem;color:var(--muted);">Awaiting rider confirmation</span>
+                    @endif
 
+                @elseif($order->status === 'ready')
                     {{-- Assign/Reassign — cashier only --}}
                     @if($isCashier)
                         @if($hasDeliveryPerson)
@@ -236,20 +264,23 @@
                         @endif
                     @endif
 
-                    {{-- Dispatch — blocked on unassigned delivery orders --}}
-                    @if($needsAssignment)
-                    <button disabled class="dq-btn dq-btn-disabled" title="Assign a delivery person first">⚠ Assign first</button>
-                    @else
-                    <button
-                        wire:click="dispatchOrder({{ $order->id }})"
-                        wire:loading.attr="disabled"
-                        wire:target="dispatchOrder({{ $order->id }})"
-                        class="dq-btn dq-btn-dispatch">
-                        🚚 Dispatch
-                    </button>
+                    {{-- Hand Over — blocked until delivery person assigned --}}
+                    @if($isCashier)
+                        @if($needsAssignment)
+                        <button disabled class="dq-btn dq-btn-disabled" title="Assign a delivery person first">⚠ Assign first</button>
+                        @else
+                        <button
+                            wire:click="confirmHandover({{ $order->id }})"
+                            wire:loading.attr="disabled"
+                            wire:target="confirmHandover({{ $order->id }})"
+                            class="dq-btn dq-btn-dispatch">
+                            🤝 Hand Over
+                        </button>
+                        @endif
                     @endif
 
                 @endif
+
             </div>
         </td>
 
