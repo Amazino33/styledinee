@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\ProductResource\RelationManagers;
 
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -33,6 +34,17 @@ class VariantsRelationManager extends RelationManager
                 ->placeholder('e.g. XL, Class 2, Gold')
                 ->required(),
 
+            FileUpload::make('image')
+                ->label('Variant Image')
+                ->image()
+                ->imageEditor()
+                ->disk('public')
+                ->directory('variants')
+                ->visibility('public')
+                ->maxSize(2048)
+                ->helperText('Optional. Show a swatch or style preview for this variant.')
+                ->columnSpanFull(),
+
             TextInput::make('price_adjustment')
                 ->label('Price Adjustment (₦)')
                 ->numeric()
@@ -50,6 +62,12 @@ class VariantsRelationManager extends RelationManager
     {
         return $table
             ->columns([
+                Tables\Columns\ImageColumn::make('image')
+                    ->disk('public')
+                    ->square()
+                    ->size(40)
+                    ->defaultImageUrl(null)
+                    ->label(''),
                 Tables\Columns\TextColumn::make('variant_type')->badge()->sortable(),
                 Tables\Columns\TextColumn::make('variant_value')->label('Value'),
                 Tables\Columns\TextColumn::make('price_adjustment')

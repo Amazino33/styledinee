@@ -808,6 +808,11 @@
                 @foreach($vprod->variants as $v)
                 <label style="display:flex;align-items:center;gap:.65rem;padding:.6rem .75rem;border:1px solid var(--border);border-radius:8px;cursor:pointer;{{ $variantModalSelectedId == $v->id ? 'border-color:var(--gold);background:rgba(201,168,76,.08);' : '' }}">
                     <input type="radio" wire:model.live="variantModalSelectedId" value="{{ $v->id }}" style="accent-color:var(--gold);">
+                    @if($v->image)
+                    <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($v->image) }}"
+                         alt="{{ $v->variant_value }}"
+                         style="width:36px;height:36px;object-fit:cover;border-radius:5px;flex-shrink:0;border:1px solid var(--border);">
+                    @endif
                     <span style="flex:1;font-size:.88rem;font-weight:600;color:var(--text);">
                         {{ ucfirst($v->variant_type) }}: {{ $v->variant_value }}
                     </span>
@@ -932,15 +937,30 @@
             @if($mprod->variants->isNotEmpty())
             <div class="mfield" style="margin-bottom:.85rem;">
                 <label style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);">Variant</label>
-                <select wire:model.live="modalVariantId" class="path-select" style="width:100%;margin-top:.3rem;">
-                    <option value="">— No specific variant —</option>
-                    @foreach($mprod->variants as $variant)
-                    <option value="{{ $variant->id }}">
-                        {{ ucfirst($variant->variant_type) }}: {{ $variant->variant_value }}
-                        @if($variant->price_adjustment != 0) (+₦{{ number_format($variant->price_adjustment, 0) }}) @endif
-                    </option>
+                <div style="display:flex;flex-direction:column;gap:.4rem;margin-top:.4rem;">
+                    <label style="display:flex;align-items:center;gap:.6rem;padding:.5rem .65rem;border:1px solid {{ $modalVariantId == '' ? 'var(--gold)' : 'var(--border)' }};border-radius:7px;cursor:pointer;{{ $modalVariantId == '' ? 'background:rgba(201,168,76,.06);' : '' }}">
+                        <input type="radio" wire:model.live="modalVariantId" value="" style="accent-color:var(--gold);">
+                        <span style="font-size:.85rem;color:var(--muted);">No specific variant</span>
+                    </label>
+                    @foreach($mprod->variants->where('is_active', true) as $variant)
+                    <label style="display:flex;align-items:center;gap:.6rem;padding:.5rem .65rem;border:1px solid {{ $modalVariantId == $variant->id ? 'var(--gold)' : 'var(--border)' }};border-radius:7px;cursor:pointer;{{ $modalVariantId == $variant->id ? 'background:rgba(201,168,76,.06);' : '' }}">
+                        <input type="radio" wire:model.live="modalVariantId" value="{{ $variant->id }}" style="accent-color:var(--gold);">
+                        @if($variant->image)
+                        <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($variant->image) }}"
+                             alt="{{ $variant->variant_value }}"
+                             style="width:32px;height:32px;object-fit:cover;border-radius:4px;flex-shrink:0;border:1px solid var(--border);">
+                        @endif
+                        <span style="flex:1;font-size:.85rem;font-weight:600;color:var(--text);">
+                            {{ ucfirst($variant->variant_type) }}: {{ $variant->variant_value }}
+                        </span>
+                        @if($variant->price_adjustment != 0)
+                        <span style="font-size:.78rem;font-weight:700;color:{{ $variant->price_adjustment > 0 ? '#059669' : '#dc2626' }};">
+                            {{ $variant->price_adjustment > 0 ? '+' : '' }}₦{{ number_format($variant->price_adjustment, 0) }}
+                        </span>
+                        @endif
+                    </label>
                     @endforeach
-                </select>
+                </div>
             </div>
             @endif
             <p class="modal-desc">Search for an existing customer or enter new details.</p>
