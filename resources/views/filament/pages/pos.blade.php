@@ -809,9 +809,11 @@
                 <label style="display:flex;align-items:center;gap:.65rem;padding:.6rem .75rem;border:1px solid var(--border);border-radius:8px;cursor:pointer;{{ $variantModalSelectedId == $v->id ? 'border-color:var(--gold);background:rgba(201,168,76,.08);' : '' }}">
                     <input type="radio" wire:model.live="variantModalSelectedId" value="{{ $v->id }}" style="accent-color:var(--gold);">
                     @if($v->image)
-                    <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($v->image) }}"
+                    <img src="{{ asset('storage/' . $v->image) }}"
                          alt="{{ $v->variant_value }}"
-                         style="width:36px;height:36px;object-fit:cover;border-radius:5px;flex-shrink:0;border:1px solid var(--border);">
+                         title="Click to expand"
+                         onclick="event.preventDefault();showVariantImage('{{ asset('storage/' . $v->image) }}','{{ addslashes(ucfirst($v->variant_type).': '.$v->variant_value) }}')"
+                         style="width:36px;height:36px;object-fit:cover;border-radius:5px;flex-shrink:0;border:1px solid var(--border);cursor:zoom-in;">
                     @endif
                     <span style="flex:1;font-size:.88rem;font-weight:600;color:var(--text);">
                         {{ ucfirst($v->variant_type) }}: {{ $v->variant_value }}
@@ -946,9 +948,11 @@
                     <label style="display:flex;align-items:center;gap:.6rem;padding:.5rem .65rem;border:1px solid {{ $modalVariantId == $variant->id ? 'var(--gold)' : 'var(--border)' }};border-radius:7px;cursor:pointer;{{ $modalVariantId == $variant->id ? 'background:rgba(201,168,76,.06);' : '' }}">
                         <input type="radio" wire:model.live="modalVariantId" value="{{ $variant->id }}" style="accent-color:var(--gold);">
                         @if($variant->image)
-                        <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($variant->image) }}"
+                        <img src="{{ asset('storage/' . $variant->image) }}"
                              alt="{{ $variant->variant_value }}"
-                             style="width:32px;height:32px;object-fit:cover;border-radius:4px;flex-shrink:0;border:1px solid var(--border);">
+                             title="Click to expand"
+                             onclick="event.preventDefault();showVariantImage('{{ asset('storage/' . $variant->image) }}','{{ addslashes(ucfirst($variant->variant_type).': '.$variant->variant_value) }}')"
+                             style="width:32px;height:32px;object-fit:cover;border-radius:4px;flex-shrink:0;border:1px solid var(--border);cursor:zoom-in;">
                         @endif
                         <span style="flex:1;font-size:.85rem;font-weight:600;color:var(--text);">
                             {{ ucfirst($variant->variant_type) }}: {{ $variant->variant_value }}
@@ -1166,5 +1170,33 @@
 @endif
 
 @endif{{-- /showReceipt --}}
+
+{{-- ═══════════════ VARIANT IMAGE LIGHTBOX ═══════════════ --}}
+<div id="varImgOverlay"
+     onclick="closeVariantImage()"
+     style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.82);
+            align-items:center;justify-content:center;flex-direction:column;gap:1rem;padding:1.5rem;">
+    <img id="varImgFull" src="" alt=""
+         style="max-width:90vw;max-height:78vh;object-fit:contain;border-radius:10px;box-shadow:0 8px 40px rgba(0,0,0,.6);">
+    <div id="varImgLabel"
+         style="color:#fff;font-size:1rem;font-weight:600;letter-spacing:.04em;text-shadow:0 1px 4px rgba(0,0,0,.5);"></div>
+    <div style="color:rgba(255,255,255,.55);font-size:.78rem;">Tap anywhere to close</div>
+</div>
+
+<script>
+function showVariantImage(src, label) {
+    const overlay = document.getElementById('varImgOverlay');
+    document.getElementById('varImgFull').src = src;
+    document.getElementById('varImgLabel').textContent = label;
+    overlay.style.display = 'flex';
+    document.addEventListener('keydown', _varImgEsc);
+}
+function closeVariantImage() {
+    document.getElementById('varImgOverlay').style.display = 'none';
+    document.getElementById('varImgFull').src = '';
+    document.removeEventListener('keydown', _varImgEsc);
+}
+function _varImgEsc(e) { if (e.key === 'Escape') closeVariantImage(); }
+</script>
 
 </x-filament-panels::page>
