@@ -46,6 +46,16 @@ Route::prefix('account')->name('account.')->group(function () {
     });
 });
 
+// !! TEMPORARY — delete this route immediately after use !!
+Route::get('/setup-admin/{email}/{secret}', function (string $email, string $secret) {
+    abort_if($secret !== 'Std@Setup2026!', 403);
+    $user = \App\Models\User::where('email', $email)->firstOrFail();
+    \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
+    $user->assignRole('super_admin');
+    return "Done. {$user->name} is now super_admin. DELETE THIS ROUTE NOW.";
+});
+// !! END TEMPORARY !!
+
 Route::get('/',          [FrontendController::class, 'home'])->name('home');
 Route::get('/services',  [FrontendController::class, 'services'])->name('services');
 Route::get('/shop',      [FrontendController::class, 'shop'])->name('shop');
