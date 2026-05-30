@@ -9,7 +9,9 @@ use App\Models\Customer;
 use App\Models\ReferralCreditLedger;
 use App\Services\ReferralService;
 use Filament\Actions\Action;
+use Filament\Actions\BulkAction;
 use Filament\Actions\EditAction;
+use Illuminate\Database\Eloquent\Collection;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -151,6 +153,26 @@ class AffiliateResource extends Resource
                         );
                     }),
                 EditAction::make(),
+            ])
+            ->bulkActions([
+                \Filament\Actions\BulkActionGroup::make([
+                    BulkAction::make('reset_commission_rate')
+                        ->label('Reset to default rate')
+                        ->icon('heroicon-o-arrow-path')
+                        ->color('warning')
+                        ->requiresConfirmation()
+                        ->modalDescription(fn () =>
+                            'This will clear the custom commission rate for all selected affiliates. '
+                            . 'They will fall back to the global default of '
+                            . AppSetting::get('affiliate_default_rate', '5') . '%.'
+                        )
+                        ->action(function (Collection $records) {
+                            $records->each->update(['commission_rate' => null]);
+                        })
+                        ->deselectRecordsAfterCompletion(),
+
+                    \Filament\Actions\DeleteBulkAction::make(),
+                ]),
             ])
             ->defaultSort('created_at', 'desc');
     }
