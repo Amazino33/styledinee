@@ -17,30 +17,49 @@
         @endif
 
         <p style="font-size:.88rem;color:var(--text-muted);margin-bottom:1.5rem;">
-            Pick a unique username — it doubles as your referral code. You cannot change it later.
+            Pick a unique username — it doubles as your referral code and cannot be changed later.
+            You can also set a password to sign in without needing a WhatsApp code next time.
         </p>
 
         <form wire:submit="save">
 
             @if(!$name)
             <div class="field">
-                <label>Full Name</label>
+                <label class="field__label">Full Name</label>
                 <input class="field__input" type="text" wire:model="name" placeholder="Amara Obi" autocomplete="name" autofocus>
                 @error('name') <span class="field__error">{{ $message }}</span> @enderror
             </div>
             @endif
 
             <div class="field">
-                <label>Username</label>
+                <label class="field__label">Username</label>
                 <input class="field__input" type="text" wire:model="username" placeholder="amara"
                     autocomplete="off" style="font-family:monospace;" {{ $name ? 'autofocus' : '' }}>
                 @error('username') <span class="field__error">{{ $message }}</span> @enderror
                 <span class="hint">Letters, numbers, underscores only.</span>
             </div>
 
+            <div style="height:1px;background:var(--border);margin:1.25rem 0;"></div>
+
+            <div class="field">
+                <label class="field__label">
+                    Password <span style="font-weight:400;color:var(--text-muted);">(optional)</span>
+                </label>
+                <input class="field__input" type="password" wire:model="password"
+                    placeholder="Leave blank to always use WhatsApp code" autocomplete="new-password">
+                @error('password') <span class="field__error">{{ $message }}</span> @enderror
+            </div>
+
+            @if($password)
+            <div class="field">
+                <label class="field__label">Confirm Password</label>
+                <input class="field__input" type="password" wire:model="password_confirmation" autocomplete="new-password">
+            </div>
+            @endif
+
             <button type="submit" class="btn btn--gold" style="width:100%;justify-content:center;"
                 wire:loading.attr="disabled">
-                <span wire:loading.remove>Confirm Username</span>
+                <span wire:loading.remove>Continue to Dashboard</span>
                 <span wire:loading>Saving…</span>
             </button>
 

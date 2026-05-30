@@ -17,7 +17,7 @@ class TransactionHistory extends Page
     protected static ?int $navigationSort = 10;
 
     public static function getNavigationIcon(): string { return 'heroicon-o-banknotes'; }
-    public static function getNavigationGroup(): ?string { return 'Operations'; }
+    public static function getNavigationGroup(): ?string { return 'Finance'; }
 
     public static function canAccess(): bool
     {
@@ -81,3 +81,4 @@ class TransactionHistory extends Page
         ];
     }
 }
+

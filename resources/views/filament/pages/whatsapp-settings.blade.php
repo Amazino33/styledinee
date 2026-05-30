@@ -134,6 +134,94 @@
         </div>
     </div>
 
+    {{-- ── SMS Fallback ── --}}
+    <div class="card">
+        <div class="card-title">SMS Fallback</div>
+        <div class="card-desc">
+            When WhatsApp delivery fails, messages are retried via SMS.
+            Currently supports Termii and BulkSMS Nigeria.
+        </div>
+
+        <div class="toggle-row">
+            <label class="toggle-switch">
+                <input type="checkbox" wire:model="sms_enabled">
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+            </label>
+            <div>
+                <div class="toggle-label">Enable SMS Fallback</div>
+                <div class="toggle-desc">Sends SMS automatically when WhatsApp cannot deliver.</div>
+            </div>
+            <div style="margin-left:auto">
+                <span class="status-badge {{ $sms_enabled ? 'status-on' : 'status-off' }}">
+                    <span style="width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block"></span>
+                    {{ $sms_enabled ? 'Enabled' : 'Disabled' }}
+                </span>
+            </div>
+        </div>
+
+        <div class="field-row" style="margin-top:16px;">
+            <div>
+                <label class="field-label">SMS Provider</label>
+                <select wire:model="sms_provider" class="field-input" style="cursor:pointer;">
+                    <option value="termii">Termii</option>
+                    <option value="bulksms">BulkSMS Nigeria</option>
+                </select>
+            </div>
+            <div>
+                <label class="field-label">Sender ID / Name</label>
+                <input type="text" wire:model="sms_sender_id" class="field-input" placeholder="Styledinee" maxlength="11">
+                @error('sms_sender_id') <p style="color:var(--red);font-size:12px;margin-top:4px">{{ $message }}</p> @enderror
+            </div>
+        </div>
+        <div class="field-row">
+            <div>
+                <label class="field-label">API Key</label>
+                <input type="password" wire:model="sms_api_key" class="field-input" placeholder="Paste API key" autocomplete="new-password">
+                @error('sms_api_key') <p style="color:var(--red);font-size:12px;margin-top:4px">{{ $message }}</p> @enderror
+            </div>
+            <div>
+                <label class="field-label">API Secret <span style="font-size:11px;color:var(--text3)">(BulkSMS only)</span></label>
+                <input type="password" wire:model="sms_api_secret" class="field-input" placeholder="Only required for BulkSMS" autocomplete="new-password">
+                @error('sms_api_secret') <p style="color:var(--red);font-size:12px;margin-top:4px">{{ $message }}</p> @enderror
+            </div>
+        </div>
+
+        <div class="btn-row">
+            <button class="btn btn-primary" wire:click="save" wire:loading.attr="disabled">
+                <span wire:loading.remove wire:target="save">Save Settings</span>
+                <span wire:loading wire:target="save">Saving…</span>
+            </button>
+        </div>
+    </div>
+
+    {{-- ── OTP Rate Limiting ── --}}
+    <div class="card">
+        <div class="card-title">OTP Rate Limiting</div>
+        <div class="card-desc">
+            Prevent spam by limiting how many login codes can be sent to the same number within a time window.
+        </div>
+        <div class="field-row">
+            <div>
+                <label class="field-label">Time Window (minutes)</label>
+                <input type="number" min="1" max="60" wire:model="otp_window_minutes" class="field-input">
+                @error('otp_window_minutes') <p style="color:var(--red);font-size:12px;margin-top:4px">{{ $message }}</p> @enderror
+                <p style="font-size:11px;color:var(--text3);margin-top:4px;">How long the window is tracked. Default: 10 min.</p>
+            </div>
+            <div>
+                <label class="field-label">Max OTP Requests per Window</label>
+                <input type="number" min="1" max="10" wire:model="otp_max_attempts" class="field-input">
+                @error('otp_max_attempts') <p style="color:var(--red);font-size:12px;margin-top:4px">{{ $message }}</p> @enderror
+                <p style="font-size:11px;color:var(--text3);margin-top:4px;">Block requests beyond this count. Default: 3.</p>
+            </div>
+        </div>
+        <div class="btn-row">
+            <button class="btn btn-primary" wire:click="save" wire:loading.attr="disabled">
+                <span wire:loading.remove wire:target="save">Save Settings</span>
+                <span wire:loading wire:target="save">Saving…</span>
+            </button>
+        </div>
+    </div>
+
     {{-- ── Test message ── --}}
     <div class="card">
         <div class="card-title">Send Test Message</div>

@@ -14,8 +14,8 @@ class Coupon extends Model
         'type', 'amount', 'max_discount_amount', 'min_order_amount',
         'usage_limit', 'usage_limit_per_customer', 'used_count',
         'eligibility_rule', 'eligibility_months',
-        'is_active', 'starts_at', 'expires_at',
-        'created_by',
+        'is_active', 'auto_apply', 'auto_apply_min_orders',
+        'starts_at', 'expires_at', 'created_by',
     ];
 
     protected $casts = [
@@ -23,6 +23,7 @@ class Coupon extends Model
         'max_discount_amount'     => 'decimal:2',
         'min_order_amount'        => 'decimal:2',
         'is_active'               => 'boolean',
+        'auto_apply'              => 'boolean',
         'starts_at'               => 'datetime',
         'expires_at'              => 'datetime',
     ];
@@ -87,6 +88,18 @@ class Coupon extends Model
             'exclusive'          => $this->exclusiveCustomers()->where('customer_id', $customer->id)->exists(),
             default              => false,
         };
+    }
+
+    /**
+     * Check if this coupon should be auto-applied for a customer at a given order total.
+     */
+    public function meetsAutoApplyCriteria(Customer $customer, float $orderTotal): bool
+    {
+        if (! $this->auto_apply || ! $this->isCurrentlyActive()) return false;
+        if ($this->min_order_amount && $orderTotal < (float) $this->min_order_amount) return false;
+        if ($this->auto_apply_min_orders > 0 && $customer->orders()->count() < $this->auto_apply_min_orders) return false;
+
+        return $this->isEligibleFor($customer);
     }
 
     private function checkLongTimePurchaser(Customer $customer): bool

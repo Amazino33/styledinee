@@ -104,6 +104,23 @@ class CouponResource extends Resource
                     DateTimePicker::make('expires_at')->label('Expires At')->nullable(),
                     Toggle::make('is_active')->label('Active')->default(true)->inline(false),
                 ])->columns(2),
+
+            Section::make('Auto-Apply')
+                ->description('Automatically apply this coupon when a customer qualifies at checkout.')
+                ->schema([
+                    Toggle::make('auto_apply')
+                        ->label('Enable Auto-Apply')
+                        ->default(false)
+                        ->inline(false)
+                        ->live()
+                        ->helperText('Coupon is applied automatically if the order meets all criteria.'),
+
+                    TextInput::make('auto_apply_min_orders')
+                        ->label('Minimum Past Orders to Qualify')
+                        ->numeric()->default(0)->minValue(0)
+                        ->visible(fn ($get) => $get('auto_apply'))
+                        ->hint('0 = apply to anyone. E.g. 3 = only for customers with 3+ completed orders.'),
+                ])->columns(2),
         ]);
     }
 

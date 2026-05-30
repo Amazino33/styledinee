@@ -10,67 +10,95 @@ use Filament\Pages\Page;
 class WhatsAppSettings extends Page
 {
     protected string $view = 'filament.pages.whatsapp-settings';
-    protected static ?string $navigationLabel = 'WhatsApp';
-    protected static ?string $title = 'WhatsApp Settings';
+    protected static ?string $navigationLabel = 'WhatsApp / SMS';
+    protected static ?string $title = 'WhatsApp & SMS Settings';
     protected static ?int $navigationSort = 20;
 
     public static function getNavigationIcon(): string { return 'heroicon-o-chat-bubble-left-ellipsis'; }
     public static function getNavigationGroup(): ?string { return 'Administration'; }
-
     public static function canAccess(): bool
     {
-        return auth()->user()?->hasRole('admin');
+        $user = auth()->user();
+        return $user instanceof \App\Models\User && $user->hasRole('admin');
     }
 
-    // ── Form state ─────────────────────────────────────────────────────────────
+    // ── WhatsApp ────────────────────────────────────────────────────────────────
+    public string $instance_id  = '';
+    public string $access_token = '';
+    public bool   $enabled      = false;
+    public string $test_number  = '';
 
-    public string $instance_id    = '';
-    public string $access_token   = '';
-    public bool   $enabled        = false;
-    public string $test_number    = '';
+    // ── SMS fallback ────────────────────────────────────────────────────────────
+    public bool   $sms_enabled   = false;
+    public string $sms_provider  = 'termii'; // termii | bulksms
+    public string $sms_api_key   = '';
+    public string $sms_api_secret = '';
+    public string $sms_sender_id  = 'Styledinee';
+
+    // ── Rate limiting ───────────────────────────────────────────────────────────
+    public int $otp_window_minutes = 10;
+    public int $otp_max_attempts   = 3;
 
     public function mount(): void
     {
         $this->instance_id  = AppSetting::get('wawp_instance_id', '');
         $this->access_token = AppSetting::get('wawp_access_token', '');
         $this->enabled      = AppSetting::bool('wawp_enabled', false);
-    }
 
-    // ── Actions ────────────────────────────────────────────────────────────────
+        $this->sms_enabled    = AppSetting::bool('sms_enabled', false);
+        $this->sms_provider   = AppSetting::get('sms_provider', 'termii');
+        $this->sms_api_key    = AppSetting::get('sms_api_key', '');
+        $this->sms_api_secret = AppSetting::get('sms_api_secret', '');
+        $this->sms_sender_id  = AppSetting::get('sms_sender_id', 'Styledinee');
+
+        $this->otp_window_minutes = (int) AppSetting::get('otp_window_minutes', 10);
+        $this->otp_max_attempts   = (int) AppSetting::get('otp_max_attempts', 3);
+    }
 
     public function save(): void
     {
         $this->validate([
-            'instance_id'  => ['nullable', 'string', 'max:100'],
-            'access_token' => ['nullable', 'string', 'max:200'],
+            'instance_id'       => ['nullable', 'string', 'max:100'],
+            'access_token'      => ['nullable', 'string', 'max:200'],
+            'sms_api_key'       => ['nullable', 'string', 'max:200'],
+            'sms_api_secret'    => ['nullable', 'string', 'max:200'],
+            'sms_sender_id'     => ['nullable', 'string', 'max:20'],
+            'otp_window_minutes'=> ['required', 'integer', 'min:1', 'max:60'],
+            'otp_max_attempts'  => ['required', 'integer', 'min:1', 'max:10'],
         ]);
 
         AppSetting::set('wawp_instance_id',  $this->instance_id);
         AppSetting::set('wawp_access_token', $this->access_token);
         AppSetting::set('wawp_enabled',      $this->enabled ? '1' : '0');
 
+        AppSetting::set('sms_enabled',    $this->sms_enabled ? '1' : '0');
+        AppSetting::set('sms_provider',   $this->sms_provider);
+        AppSetting::set('sms_api_key',    $this->sms_api_key);
+        AppSetting::set('sms_api_secret', $this->sms_api_secret);
+        AppSetting::set('sms_sender_id',  $this->sms_sender_id);
+
+        AppSetting::set('otp_window_minutes', (string) $this->otp_window_minutes);
+        AppSetting::set('otp_max_attempts',   (string) $this->otp_max_attempts);
+
         Notification::make()->title('Settings saved.')->success()->send();
     }
 
     public function sendTest(): void
     {
-        $this->validate([
-            'test_number' => ['required', 'string', 'min:7'],
-        ]);
+        $this->validate(['test_number' => ['required', 'string', 'min:7']]);
 
         $sent = app(WhatsAppService::class)->send(
             $this->test_number,
-            'This is a test message from Styledinee. Your WhatsApp integration is working correctly.'
+            'This is a test message from Styledinee. Your messaging integration is working correctly.'
         );
 
         if ($sent) {
             Notification::make()->title('Test message sent.')->success()->send();
         } else {
             Notification::make()
-                ->title('Message not sent.')
-                ->body('Check that WhatsApp is enabled and credentials are saved.')
-                ->warning()
-                ->send();
+                ->title('Not sent — check log for details.')
+                ->body('Enable WhatsApp or SMS and save credentials first.')
+                ->warning()->send();
         }
     }
 }

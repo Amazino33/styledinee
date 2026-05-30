@@ -26,14 +26,14 @@ class Pos extends Page
     protected static ?int $navigationSort = 0;
 
     public static function getNavigationIcon(): string { return 'heroicon-o-calculator'; }
-    public static function getNavigationGroup(): ?string { return 'Operations'; }
+    public static function getNavigationGroup(): ?string { return 'Point of Sale'; }
 
     public static function canAccess(): bool
     {
         return auth()->user()?->hasAnyRole(['admin', 'cashier']);
     }
 
-    // ── Cart / Order State ─────────────────────────────────
+    // â”€â”€ Cart / Order State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     public string $orderType    = 'tailoring';
     public string $customerName = '';
     public string $customerPhone = '';
@@ -43,22 +43,24 @@ class Pos extends Page
     public string $estimatedCompletionDate = '';
     public string $notes = '';
     public array  $items = [];
-    public string $amountPaid    = '';
-    public string $paymentMethod = 'cash';
+    // Split payments: each entry has 'method' and 'amount'
+    public array $splits = [
+        ['method' => 'cash', 'amount' => ''],
+    ];
 
-    // ── POS Step: 'order' | 'payment' ─────────────────────
+    // â”€â”€ POS Step: 'order' | 'payment' â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     public string $posStep = 'order';
 
-    // ── Customer search (order step) ───────────────────────
+    // â”€â”€ Customer search (order step) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     public string $customerSearch = '';
 
-    // ── Order summary collapsed state ──────────────────────
+    // â”€â”€ Order summary collapsed state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     public bool $orderSummaryCollapsed = false;
 
-    // ── Product Grid State ─────────────────────────────────
+    // â”€â”€ Product Grid State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     public string $search = '';
 
-    // ── Variant Picker Modal (ready-made products with variants) ──
+    // â”€â”€ Variant Picker Modal (ready-made products with variants) â”€â”€
     public bool  $showVariantModal          = false;
     public ?int  $variantModalProductId     = null;
     public ?int  $variantModalSelectedId    = null;
@@ -91,7 +93,7 @@ class Pos extends Page
         $this->closeVariantModal();
     }
 
-    // ── Production Modal State ─────────────────────────────
+    // â”€â”€ Production Modal State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     public bool   $showProductModal = false;
     public ?int   $modalProductId   = null;
     public ?int   $modalVariantId   = null;
@@ -109,22 +111,22 @@ class Pos extends Page
     public string $modalDesignNotes   = '';
     public        $modalDesignFile    = null; // Livewire TemporaryUploadedFile
 
-    // ── Customer Modal State ───────────────────────────────
+    // â”€â”€ Customer Modal State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     public bool $showCustomerModal = false;
     public bool $processAfterCustomer = false;
 
-    // ── Post-sale State ────────────────────────────────────
+    // â”€â”€ Post-sale State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     public bool $showReceipt = false;
     public ?int  $completedOrderId = null;
     public ?int  $customerId = null;
 
-    // ── Lifecycle ──────────────────────────────────────────
+    // â”€â”€ Lifecycle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     public function mount(): void
     {
         $this->addBlankItem();
     }
 
-    // ── Product Grid ───────────────────────────────────────
+    // â”€â”€ Product Grid â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     public function getProducts(): Collection
     {
         return Product::where('is_active', true)
@@ -139,7 +141,7 @@ class Pos extends Page
         return Service::where('is_active', true)->orderBy('sort_order')->get();
     }
 
-    // ── Product Click Handler ──────────────────────────────
+    // â”€â”€ Product Click Handler â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     public function selectProduct(int $productId): void
     {
         $product = Product::with(['variants' => fn ($q) => $q->where('is_active', true)])
@@ -183,13 +185,15 @@ class Pos extends Page
         } else {
             $this->items[] = $this->makeCartItem($product, $price, $variant);
         }
+
+        $this->autoFillEstimatedDate();
     }
 
     private function makeCartItem(Product $product, float $price, ?\App\Models\ProductVariant $variant = null): array
     {
         $description = $product->name;
         if ($variant) {
-            $description .= ' — ' . ucfirst($variant->variant_type) . ': ' . $variant->variant_value;
+            $description .= ' â€” ' . ucfirst($variant->variant_type) . ': ' . $variant->variant_value;
         }
 
         return [
@@ -209,7 +213,7 @@ class Pos extends Page
         ];
     }
 
-    // ── Production Modal ───────────────────────────────────
+    // â”€â”€ Production Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     public function openProductionModal(int $productId): void
     {
         $this->modalProductId       = $productId;
@@ -234,7 +238,7 @@ class Pos extends Page
             foreach ($product->materials as $m) {
                 $this->modalBom[] = [
                     'id'       => $m->id,
-                    'name'     => $m->material?->name ?? '—',
+                    'name'     => $m->material?->name ?? 'â€”',
                     'quantity' => (float) $m->quantity,
                     'unit'     => $m->material?->unit ?? '',
                 ];
@@ -262,7 +266,7 @@ class Pos extends Page
         return Product::with(['materials', 'measurementTemplate', 'variants' => fn ($q) => $q->where('is_active', true)->orderBy('variant_type')])->find($this->modalProductId);
     }
 
-    // ── Customer Modal ─────────────────────────────────────
+    // â”€â”€ Customer Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     public function openCustomerModal(bool $processAfter = false): void
     {
         $this->processAfterCustomer = $processAfter;
@@ -290,7 +294,7 @@ class Pos extends Page
         }
     }
 
-    // ── Order-step customer search ─────────────────────────
+    // â”€â”€ Order-step customer search â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     public function getSearchCustomers(): \Illuminate\Support\Collection
     {
         if (strlen($this->customerSearch) < 2) return collect();
@@ -489,9 +493,11 @@ class Pos extends Page
 
         $this->showProductModal = false;
         $this->modalProductId   = null;
+
+        $this->autoFillEstimatedDate();
     }
 
-    // ── Manual Item Management ─────────────────────────────
+    // ── Manual Item Management â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     public function addBlankItem(): void
     {
         $this->items[] = [
@@ -546,6 +552,8 @@ class Pos extends Page
         if (empty($this->items)) {
             $this->addBlankItem();
         }
+
+        $this->autoFillEstimatedDate();
     }
 
     public function updatedItems(mixed $value, string $key): void
@@ -559,9 +567,11 @@ class Pos extends Page
             $items[$index]['subtotal'] = round($qty * $price, 2);
             $this->items = $items;
         }
+
+        $this->autoFillEstimatedDate();
     }
 
-    // ── Step Navigation ────────────────────────────────────
+    // â”€â”€ Step Navigation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     public function processOrder(): void
     {
         if (empty(trim($this->customerName)) || empty(trim($this->customerPhone))) {
@@ -601,20 +611,77 @@ class Pos extends Page
         $this->posStep = 'order';
     }
 
-    // ── Computed ───────────────────────────────────────────
+    // â”€â”€ Computed â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     public function getTotal(): float
     {
         return round(collect($this->items)->sum(fn ($i) => (float) ($i['subtotal'] ?? 0)), 2);
     }
 
+    public function hasProductionItems(): bool
+    {
+        return collect($this->items)->contains(fn ($i) => ($i['production_type'] ?? 'ready_made') === 'production');
+    }
+
+    public function autoFillEstimatedDate(): void
+    {
+        if (! $this->hasProductionItems()) {
+            $this->estimatedCompletionDate = '';
+            return;
+        }
+
+        $productIds = collect($this->items)
+            ->where('production_type', 'production')
+            ->pluck('product_id')
+            ->filter()
+            ->unique()
+            ->values();
+
+        $maxHours = 0;
+        if ($productIds->isNotEmpty()) {
+            $maxHours = \App\Models\Product::whereIn('id', $productIds)
+                ->max('estimated_production_hours') ?? 0;
+        }
+
+        // Default to 7 days if no estimate stored; convert hours to working days (8 hrs/day)
+        $days = $maxHours > 0 ? (int) ceil($maxHours / 8) : 7;
+
+        $this->estimatedCompletionDate = now()->addWeekdays($days)->format('Y-m-d');
+    }
+
+    public function getSplitTotal(): float
+    {
+        return round(collect($this->splits)->sum(fn ($s) => (float) ($s['amount'] ?? 0)), 2);
+    }
+
     public function getChange(): float
     {
-        return max(0, round((float) $this->amountPaid - $this->getTotal(), 2));
+        return max(0, round($this->getSplitTotal() - $this->getTotal(), 2));
     }
 
     public function getBalance(): float
     {
-        return max(0, round($this->getTotal() - (float) $this->amountPaid, 2));
+        return max(0, round($this->getTotal() - $this->getSplitTotal(), 2));
+    }
+
+    public function addSplit(): void
+    {
+        $this->splits[] = ['method' => 'transfer', 'amount' => ''];
+    }
+
+    public function removeSplit(int $index): void
+    {
+        if (count($this->splits) > 1) {
+            array_splice($this->splits, $index, 1);
+            $this->splits = array_values($this->splits);
+        }
+    }
+
+    public function fillRemaining(int $index): void
+    {
+        $remaining = $this->getBalance();
+        if ($remaining > 0) {
+            $this->splits[$index]['amount'] = (string) $remaining;
+        }
     }
 
     public function getCompletedOrder(): ?Order
@@ -623,7 +690,7 @@ class Pos extends Page
         return Order::with('items')->find($this->completedOrderId);
     }
 
-    // ── Validation ─────────────────────────────────────────
+    // â”€â”€ Validation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     protected function rules(): array
     {
         return [
@@ -648,19 +715,19 @@ class Pos extends Page
         ];
     }
 
-    // ── Complete Sale ──────────────────────────────────────
+    // â”€â”€ Complete Sale â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     public function completeSale(): void
     {
         $this->validate();
 
         $total      = $this->getTotal();
-        $amountPaid = (float) $this->amountPaid;
+        $amountPaid = $this->getSplitTotal();
 
         $minDeposit = $total * 0.5;
         if ($amountPaid < $minDeposit) {
             Notification::make()
                 ->title('Minimum deposit required')
-                ->body('At least 50% (₦' . number_format($minDeposit, 0) . ') must be paid before confirming this order.')
+                ->body('At least 50% (â‚¦' . number_format($minDeposit, 0) . ') must be paid before confirming this order.')
                 ->danger()
                 ->send();
             return;
@@ -700,8 +767,11 @@ class Pos extends Page
             'estimated_completion_date' => $this->estimatedCompletionDate ?: null,
         ]);
 
-        if ($amountPaid > 0) {
-            $order->recordPayment($amountPaid, $this->paymentMethod, 'Initial payment via POS.');
+        foreach ($this->splits as $split) {
+            $amt = (float) ($split['amount'] ?? 0);
+            if ($amt > 0) {
+                $order->recordPayment($amt, $split['method'], 'POS payment via ' . strtoupper($split['method']));
+            }
         }
 
         $hasProduction = false;
@@ -751,7 +821,7 @@ class Pos extends Page
             }
         }
 
-        // Non-production delivery orders have nothing to produce — advance to ready now
+        // Non-production delivery orders have nothing to produce â€” advance to ready now
         if (! $hasProduction) {
             $order->syncStatusFromItems();
         }
@@ -760,7 +830,7 @@ class Pos extends Page
             'order_id'      => $order->id,
             'changed_by'    => auth()->id(),
             'status'        => 'confirmed',
-            'notes'         => 'Created via POS — ' . strtoupper($this->paymentMethod),
+            'notes'         => 'Created via POS — ' . collect($this->splits)->filter(fn($s) => (float)($s['amount']??0) > 0)->map(fn($s) => strtoupper($s['method']))->join(' + '),
             'is_published'  => true,
             'client_message'=> 'Your order has been received and confirmed.',
         ]);
@@ -776,7 +846,7 @@ class Pos extends Page
         $this->showReceipt = true;
 
         Notification::make()
-            ->title('Sale completed — ' . $order->reference)
+            ->title('Sale completed â€” ' . $order->reference)
             ->success()
             ->send();
     }
@@ -785,15 +855,16 @@ class Pos extends Page
     {
         $this->reset([
             'customerName', 'customerPhone', 'customerEmail', 'customerAddress',
-            'notes', 'items', 'amountPaid', 'completedOrderId', 'showReceipt',
+            'notes', 'items', 'completedOrderId', 'showReceipt',
             'customerId', 'estimatedCompletionDate', 'search', 'showProductModal', 'modalProductId',
             'modalDesignNotes', 'modalDesignFile', 'showCustomerModal', 'processAfterCustomer',
             'showVariantModal', 'variantModalProductId', 'variantModalSelectedId',
         ]);
-        $this->orderType     = 'tailoring';
-        $this->paymentMethod = 'cash';
-        $this->deliveryType  = 'pickup';
+        $this->orderType    = 'tailoring';
+        $this->splits       = [['method' => 'cash', 'amount' => '']];
+        $this->deliveryType = 'pickup';
         $this->posStep       = 'order';
         $this->addBlankItem();
     }
 }
+

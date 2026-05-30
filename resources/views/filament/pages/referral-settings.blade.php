@@ -69,6 +69,11 @@
                 @error('referral_default_amount') <p style="color:var(--red);font-size:12px;margin-top:4px">{{ $message }}</p> @enderror
             </div>
             <div>
+                <label class="field-label">Minimum Order Amount (₦)</label>
+                <input type="number" min="0" step="100" wire:model="referral_min_order_amount" class="field-input" placeholder="0 = no minimum">
+                <p class="field-hint">Order must be at least this amount to trigger reward.</p>
+            </div>
+            <div>
                 <label class="field-label">Default Payout Method</label>
                 <select wire:model="referral_default_payout" class="field-select">
                     <option value="credit">Account Credit</option>
@@ -134,6 +139,11 @@
                 <input type="number" min="0" max="100" step="0.5" wire:model="affiliate_default_rate" class="field-input" placeholder="e.g. 5">
                 @error('affiliate_default_rate') <p style="color:var(--red);font-size:12px;margin-top:4px">{{ $message }}</p> @enderror
                 <p class="field-hint">Individual affiliates can have their own override rate.</p>
+            </div>
+            <div>
+                <label class="field-label">Minimum Order Amount (₦)</label>
+                <input type="number" min="0" step="100" wire:model="affiliate_min_order_amount" class="field-input" placeholder="0 = no minimum">
+                <p class="field-hint">Order must reach this amount to earn commission.</p>
             </div>
             <div>
                 <label class="field-label">Default Payout Method</label>

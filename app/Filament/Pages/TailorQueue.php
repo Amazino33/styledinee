@@ -18,14 +18,14 @@ class TailorQueue extends Page
     protected static ?int $navigationSort = 2;
 
     public static function getNavigationIcon(): string { return 'heroicon-o-scissors'; }
-    public static function getNavigationGroup(): ?string { return 'Operations'; }
+    public static function getNavigationGroup(): ?string { return 'Production'; }
 
     public static function canAccess(): bool
     {
         return auth()->user()?->hasAnyRole(['admin', 'tailor']);
     }
 
-    // ── Details modal state ─────────────────────────────────
+    // â”€â”€ Details modal state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     public bool $showDetailsModal    = false;
     public ?int $detailsAssignmentId = null;
 
@@ -41,7 +41,7 @@ class TailorQueue extends Page
         $this->detailsAssignmentId = null;
     }
 
-    // ── Admin header action: toggle customer contact visibility ──
+    // â”€â”€ Admin header action: toggle customer contact visibility â”€â”€
     protected function getHeaderActions(): array
     {
         if (! auth()->user()?->hasRole('admin')) return [];
@@ -100,7 +100,7 @@ class TailorQueue extends Page
         if ($cashiers->isNotEmpty()) {
             Notification::make()
                 ->title('Stage Advanced')
-                ->body("Order {$order?->reference} — {$item->description} → {$nextLabel} (by {$staffName}).")
+                ->body("Order {$order?->reference} â€” {$item->description} â†’ {$nextLabel} (by {$staffName}).")
                 ->sendToDatabase($cashiers);
         }
 
@@ -108,6 +108,7 @@ class TailorQueue extends Page
             $this->closeDetailsModal();
         }
 
-        Notification::make()->title("Done — advanced to {$nextLabel}.")->success()->send();
+        Notification::make()->title("Done â€” advanced to {$nextLabel}.")->success()->send();
     }
 }
+

@@ -18,7 +18,7 @@ class OrderStatusLogResource extends Resource
     protected static ?string $navigationLabel = 'Status Logs';
 
     public static function getNavigationIcon(): string { return 'heroicon-o-clock'; }
-    public static function getNavigationGroup(): ?string { return 'Operations'; }
+    public static function getNavigationGroup(): ?string { return 'Orders'; }
 
     public static function canAccess(): bool
     {
@@ -60,3 +60,4 @@ class OrderStatusLogResource extends Resource
         ];
     }
 }
+

@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\CustomerResource\Pages;
@@ -18,7 +17,7 @@ class CustomerResource extends Resource
     protected static ?int $navigationSort = 0;
 
     public static function getNavigationIcon(): string { return 'heroicon-o-users'; }
-    public static function getNavigationGroup(): ?string { return 'Operations'; }
+    public static function getNavigationGroup(): ?string { return 'Customers'; }
 
     public static function canAccess(): bool
     {
@@ -71,3 +70,4 @@ class CustomerResource extends Resource
         ];
     }
 }
+

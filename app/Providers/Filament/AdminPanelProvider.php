@@ -60,6 +60,17 @@ class AdminPanelProvider extends PanelProvider
             ->colors([
                 'primary' => Color::hex('#C9A84C'),
             ])
+            ->navigationGroups([
+                'Point of Sale',
+                'Production',
+                'Orders',
+                'Customers',
+                'Finance',
+                'Catalogue',
+                'Referral & Rewards',
+                'Settings',
+                'Administration',
+            ])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             ->pages([

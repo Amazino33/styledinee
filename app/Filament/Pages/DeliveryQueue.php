@@ -18,33 +18,33 @@ class DeliveryQueue extends Page
     protected static ?int $navigationSort = 4;
 
     public static function getNavigationIcon(): string { return 'heroicon-o-truck'; }
-    public static function getNavigationGroup(): ?string { return 'Operations'; }
+    public static function getNavigationGroup(): ?string { return 'Production'; }
 
     public static function canAccess(): bool
     {
         return auth()->user()?->hasAnyRole(['admin', 'cashier', 'delivery']);
     }
 
-    // ── OTP verify state ───────────────────────────────────
+    // â”€â”€ OTP verify state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     public string $otpInput      = '';
     public ?int   $verifyOrderId = null;
 
-    // ── Payment gate (shown after OTP passes but balance outstanding) ──
+    // â”€â”€ Payment gate (shown after OTP passes but balance outstanding) â”€â”€
     public bool   $paymentWarning     = false;
     public bool   $otpVerified        = false;
     public float  $paymentBalanceDue  = 0.0;
     public string $paymentStatusLabel = '';
 
-    // ── Cash collection sub-screen ─────────────────────────
+    // â”€â”€ Cash collection sub-screen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     public bool   $showCashCollect  = false;
     public string $cashCollectInput = '';
 
-    // ── Delivery assignment modal state ────────────────────
+    // â”€â”€ Delivery assignment modal state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     public bool  $showDeliveryModal = false;
     public ?int  $deliveryOrderId   = null;
     public ?int  $deliveryUserId    = null;
 
-    // ── Queries ────────────────────────────────────────────
+    // â”€â”€ Queries â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     public function getOrders()
     {
         $query = Order::with(['items', 'deliveryUser', 'handedOverBy', 'latestOtp'])
@@ -67,7 +67,7 @@ class DeliveryQueue extends Page
             ->toArray();
     }
 
-    // ── Delivery assignment modal ──────────────────────────
+    // â”€â”€ Delivery assignment modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     public function openDeliveryModal(int $orderId): void
     {
         $order = Order::find($orderId);
@@ -116,7 +116,7 @@ class DeliveryQueue extends Page
         $this->deliveryUserId    = null;
     }
 
-    // ── Step 1: Cashier confirms physical handover ─────────
+    // â”€â”€ Step 1: Cashier confirms physical handover â”€â”€â”€â”€â”€â”€â”€â”€â”€
     public function confirmHandover(int $orderId): void
     {
         $order = Order::find($orderId);
@@ -147,13 +147,13 @@ class DeliveryQueue extends Page
         } catch (\Throwable) {}
 
         Notification::make()
-            ->title("Handed over — {$order->reference}")
+            ->title("Handed over â€” {$order->reference}")
             ->body("Waiting for {$order->deliveryUser?->name} to confirm collection.")
             ->success()
             ->send();
     }
 
-    // ── Step 2: Delivery person confirms they collected ────
+    // â”€â”€ Step 2: Delivery person confirms they collected â”€â”€â”€â”€
     public function confirmCollection(int $orderId): void
     {
         $order = Order::find($orderId);
@@ -189,14 +189,14 @@ class DeliveryQueue extends Page
         } catch (\Throwable) {}
 
         Notification::make()
-            ->title("Collected — {$order->reference}")
+            ->title("Collected â€” {$order->reference}")
             ->body("Customer OTP sent. Code: {$otp}")
             ->persistent()
             ->success()
             ->send();
     }
 
-    // ── OTP verification ───────────────────────────────────
+    // â”€â”€ OTP verification â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     public function openVerify(int $orderId): void
     {
         $this->verifyOrderId      = $orderId;
@@ -225,7 +225,7 @@ class DeliveryQueue extends Page
             return;
         }
 
-        // OTP is correct — check payment before completing delivery
+        // OTP is correct â€” check payment before completing delivery
         $this->otpVerified = true;
 
         if ($order->payment_status !== 'paid') {
@@ -250,7 +250,7 @@ class DeliveryQueue extends Page
             $this->paymentStatusLabel = ucfirst($order->payment_status);
             Notification::make()
                 ->title('Payment still outstanding')
-                ->body('₦' . number_format($this->paymentBalanceDue, 0) . ' remaining.')
+                ->body('â‚¦' . number_format($this->paymentBalanceDue, 0) . ' remaining.')
                 ->warning()
                 ->send();
             return;
@@ -260,7 +260,7 @@ class DeliveryQueue extends Page
         $this->completeDelivery($order, $latest);
     }
 
-    // ── Cash collection ────────────────────────────────────
+    // â”€â”€ Cash collection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     public function openCashCollect(): void
     {
         $this->cashCollectInput = number_format($this->paymentBalanceDue, 2, '.', '');
@@ -293,7 +293,7 @@ class DeliveryQueue extends Page
         if ($newAmountPaid > $total) {
             Notification::make()
                 ->title('Amount exceeds balance')
-                ->body('Maximum collectable is ₦' . number_format($this->paymentBalanceDue, 0) . '.')
+                ->body('Maximum collectable is â‚¦' . number_format($this->paymentBalanceDue, 0) . '.')
                 ->danger()
                 ->send();
             return;
@@ -314,7 +314,7 @@ class DeliveryQueue extends Page
         if ($admins->isNotEmpty()) {
             Notification::make()
                 ->title('Cash collected on delivery')
-                ->body("₦" . number_format($collected, 0) . " collected by {$driverName} for order {$order->reference}.")
+                ->body("â‚¦" . number_format($collected, 0) . " collected by {$driverName} for order {$order->reference}.")
                 ->sendToDatabase($admins);
         }
 
@@ -322,12 +322,12 @@ class DeliveryQueue extends Page
         $this->cashCollectInput = '';
 
         if ($newStatus !== 'paid') {
-            // Partial — still outstanding, refresh the warning
+            // Partial â€” still outstanding, refresh the warning
             $this->paymentBalanceDue  = round($total - $newAmountPaid, 2);
             $this->paymentStatusLabel = 'Partial';
             Notification::make()
                 ->title('Payment updated')
-                ->body('₦' . number_format($this->paymentBalanceDue, 0) . ' still outstanding.')
+                ->body('â‚¦' . number_format($this->paymentBalanceDue, 0) . ' still outstanding.')
                 ->warning()
                 ->send();
             return;
@@ -381,3 +381,4 @@ class DeliveryQueue extends Page
         $this->cashCollectInput   = '';
     }
 }
+

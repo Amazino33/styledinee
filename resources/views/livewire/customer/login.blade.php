@@ -7,11 +7,32 @@
             STYLE<span style="color:var(--gold)">DINEE</span>
         </div>
         <div style="font-size:.85rem;color:var(--text-muted);margin-top:.5rem;">
-            @if($step === 'phone') Sign in to your account @endif
-            @if($step === 'otp')   Enter the code we sent you @endif
-            @if($step === 'username') Set up your account @endif
+            @if($mode === 'password') Sign in with your password
+            @elseif($step === 'otp') Enter the code we sent you
+            @else Sign in to your account
+            @endif
         </div>
     </div>
+
+    {{-- Mode toggle --}}
+    @if($step === 'phone' || $mode === 'password')
+    <div style="display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:1.25rem;">
+        <button type="button"
+            wire:click="$set('mode','otp')"
+            style="flex:1;padding:.55rem;font-size:.82rem;font-weight:600;border:none;cursor:pointer;
+                   background:{{ $mode==='otp' ? 'var(--black)' : 'transparent' }};
+                   color:{{ $mode==='otp' ? '#fff' : 'var(--text-muted)' }};">
+            WhatsApp / SMS Code
+        </button>
+        <button type="button"
+            wire:click="$set('mode','password')"
+            style="flex:1;padding:.55rem;font-size:.82rem;font-weight:600;border:none;cursor:pointer;
+                   background:{{ $mode==='password' ? 'var(--black)' : 'transparent' }};
+                   color:{{ $mode==='password' ? '#fff' : 'var(--text-muted)' }};">
+            Password
+        </button>
+    </div>
+    @endif
 
     <div class="card" style="padding:2rem;">
 
@@ -21,26 +42,26 @@
         </div>
         @endif
 
-        {{-- Step 1: Phone ─────────────────────────────────── --}}
-        @if($step === 'phone')
+        {{-- ── OTP: Phone step ────────────────────────────── --}}
+        @if($mode === 'otp' && $step === 'phone')
         <form wire:submit="requestOtp">
             @if($isNew ?? false)
             <div class="field">
-                <label>Full Name</label>
-                <input type="text" wire:model="name" placeholder="Amara Obi" autocomplete="name">
-                @error('name') <span class="err">{{ $message }}</span> @enderror
+                <label class="field__label">Full Name</label>
+                <input class="field__input" type="text" wire:model="name" placeholder="Amara Obi" autocomplete="name">
+                @error('name') <span class="field__error">{{ $message }}</span> @enderror
             </div>
             @endif
 
             <div class="field">
-                <label>Phone Number</label>
-                <input type="tel" wire:model="phone" placeholder="08012345678" autocomplete="tel" autofocus>
-                @error('phone') <span class="err">{{ $message }}</span> @enderror
-                <span class="hint">We'll send a 6-digit code to your WhatsApp.</span>
+                <label class="field__label">Phone Number</label>
+                <input class="field__input" type="tel" wire:model="phone" placeholder="08012345678" autocomplete="tel" autofocus>
+                @error('phone') <span class="field__error">{{ $message }}</span> @enderror
+                <span class="hint">We'll send a 6-digit code to your WhatsApp or SMS.</span>
             </div>
 
             @if($referred_by)
-            <div style="font-size:.8rem;color:var(--text-muted);margin-bottom:1rem;padding:.6rem 1rem;background:var(--gray-100);border-radius:8px;">
+            <div style="font-size:.8rem;color:var(--text-muted);margin-bottom:1rem;padding:.6rem 1rem;background:#f9f9f9;border-radius:8px;">
                 Referral code applied: <strong>{{ $referred_by }}</strong>
             </div>
             @endif
@@ -52,8 +73,8 @@
         </form>
         @endif
 
-        {{-- Step 2: OTP ──────────────────────────────────── --}}
-        @if($step === 'otp')
+        {{-- ── OTP: Code step ──────────────────────────────── --}}
+        @if($mode === 'otp' && $step === 'otp')
         <form wire:submit="verifyOtp">
             <div style="text-align:center;margin-bottom:1.5rem;">
                 <div style="font-size:.9rem;color:var(--text-muted);">
@@ -62,11 +83,11 @@
             </div>
 
             <div class="field">
-                <label>6-Digit Code</label>
-                <input type="text" wire:model="otp" placeholder="000000" maxlength="6"
+                <label class="field__label">6-Digit Code</label>
+                <input class="field__input" type="text" wire:model="otp" placeholder="000000" maxlength="6"
                     inputmode="numeric" autocomplete="one-time-code"
                     style="letter-spacing:.3em;font-size:1.4rem;text-align:center;" autofocus>
-                @error('otp') <span class="err">{{ $message }}</span> @enderror
+                @error('otp') <span class="field__error">{{ $message }}</span> @enderror
             </div>
 
             <button type="submit" class="btn btn--gold" style="width:100%;justify-content:center;" wire:loading.attr="disabled">
@@ -81,33 +102,29 @@
         </form>
         @endif
 
-        {{-- Step 3: Username ────────────────────────────────── --}}
-        @if($step === 'username')
-        <form wire:submit="setUsername">
-            <p style="font-size:.88rem;color:var(--text-muted);margin-bottom:1.25rem;">
-                Almost there — choose a unique username. It becomes your referral code.
-            </p>
-
-            @if(!$name)
+        {{-- ── Password login ───────────────────────────────── --}}
+        @if($mode === 'password')
+        <form wire:submit="loginWithPassword">
             <div class="field">
-                <label>Full Name</label>
-                <input type="text" wire:model="name" placeholder="Amara Obi" autocomplete="name" autofocus>
-                @error('name') <span class="err">{{ $message }}</span> @enderror
+                <label class="field__label">Phone Number</label>
+                <input class="field__input" type="tel" wire:model="pw_phone" placeholder="08012345678" autocomplete="tel" autofocus>
+                @error('pw_phone') <span class="field__error">{{ $message }}</span> @enderror
             </div>
-            @endif
 
             <div class="field">
-                <label>Username</label>
-                <input type="text" wire:model="username" placeholder="amara" autocomplete="off"
-                    style="font-family:monospace;" {{ $name ? 'autofocus' : '' }}>
-                @error('username') <span class="err">{{ $message }}</span> @enderror
-                <span class="hint">Letters, numbers, underscores only. This becomes your referral code.</span>
+                <label class="field__label">Password</label>
+                <input class="field__input" type="password" wire:model="pw_password" autocomplete="current-password">
+                @error('pw_password') <span class="field__error">{{ $message }}</span> @enderror
             </div>
 
             <button type="submit" class="btn btn--gold" style="width:100%;justify-content:center;" wire:loading.attr="disabled">
-                <span wire:loading.remove wire:target="setUsername">Continue</span>
-                <span wire:loading wire:target="setUsername">Saving…</span>
+                <span wire:loading.remove wire:target="loginWithPassword">Sign In</span>
+                <span wire:loading wire:target="loginWithPassword">Signing in…</span>
             </button>
+
+            <p style="font-size:.78rem;color:var(--text-muted);text-align:center;margin-top:.85rem;">
+                No password set? Switch to <strong>WhatsApp / SMS Code</strong> above.
+            </p>
         </form>
         @endif
 

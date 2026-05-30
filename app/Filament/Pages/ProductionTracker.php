@@ -18,7 +18,7 @@ class ProductionTracker extends Page
     protected static ?int $navigationSort = 1;
 
     public static function getNavigationIcon(): string { return 'heroicon-o-clipboard-document-list'; }
-    public static function getNavigationGroup(): ?string { return 'Operations'; }
+    public static function getNavigationGroup(): ?string { return 'Production'; }
 
     public static function canAccess(): bool
     {
@@ -39,14 +39,14 @@ class ProductionTracker extends Page
         'finishing'  => ['label' => 'Finishing',  'role_label' => 'Dry Cleaners'],
     ];
 
-    // ── Assignment modal state ──────────────────────────────
+    // â”€â”€ Assignment modal state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     public bool   $showAssignModal = false;
     public ?int   $assignItemId    = null;
     public string $assignStage     = '';
     public ?int   $assignStaffId   = null;
     public string $assignNotes     = '';
 
-    // ── Details modal state ─────────────────────────────────
+    // â”€â”€ Details modal state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     public bool $showDetailsModal = false;
     public ?int $detailsItemId    = null;
 
@@ -105,7 +105,7 @@ class ProductionTracker extends Page
             ->toArray();
     }
 
-    // ── Details modal ───────────────────────────────────────
+    // â”€â”€ Details modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     public function openDetailsModal(int $itemId): void
     {
         $this->detailsItemId    = $itemId;
@@ -118,7 +118,7 @@ class ProductionTracker extends Page
         $this->detailsItemId    = null;
     }
 
-    // ── Advance stage ───────────────────────────────────────
+    // â”€â”€ Advance stage â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     public function advanceStage(int $itemId): void
     {
         $item = OrderItem::with(['order', 'activeAssignment'])->find($itemId);
@@ -148,10 +148,10 @@ class ProductionTracker extends Page
         $item->advanceToNextStage(auth()->id());
 
         $nextLabel = OrderItem::PRODUCTION_STAGES[$next] ?? ucfirst($next);
-        Notification::make()->title("{$item->description} → {$nextLabel}")->success()->send();
+        Notification::make()->title("{$item->description} â†’ {$nextLabel}")->success()->send();
     }
 
-    // ── Assignment modal ────────────────────────────────────
+    // â”€â”€ Assignment modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     public function openAssignModal(int $itemId, string $stage): void
     {
         if (! array_key_exists($stage, OrderItem::PRODUCTION_STAGES)) return;
@@ -232,8 +232,8 @@ class ProductionTracker extends Page
 
         $stageLabel = OrderItem::PRODUCTION_STAGES[$this->assignStage];
         $msg = isset($staffName)
-            ? "{$item->description} → {$stageLabel} (assigned to {$staffName})"
-            : "{$item->description} → {$stageLabel}";
+            ? "{$item->description} â†’ {$stageLabel} (assigned to {$staffName})"
+            : "{$item->description} â†’ {$stageLabel}";
 
         Notification::make()->title($msg)->success()->send();
 
@@ -251,3 +251,4 @@ class ProductionTracker extends Page
         $this->assignStage     = '';
     }
 }
+

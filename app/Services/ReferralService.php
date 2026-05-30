@@ -40,6 +40,9 @@ class ReferralService
         $rewardAmount = (float) AppSetting::get('referral_default_amount', 0);
         if ($rewardAmount <= 0) return;
 
+        $minOrderAmount = (float) AppSetting::get('referral_min_order_amount', 0);
+        if ($minOrderAmount > 0 && (float) $order->total_amount < $minOrderAmount) return;
+
         $payoutType = AppSetting::get('referral_default_payout', 'credit');
         $autoTrigger = AppSetting::bool('referral_auto_trigger', true);
 
@@ -107,6 +110,9 @@ class ReferralService
         // Avoid double-recording for the same order
         $exists = AffiliateCommission::where('order_id', $order->id)->exists();
         if ($exists) return;
+
+        $minOrderAmount = (float) AppSetting::get('affiliate_min_order_amount', 0);
+        if ($minOrderAmount > 0 && (float) $order->total_amount < $minOrderAmount) return;
 
         $rate   = $affiliate->effectiveCommissionRate();
         $amount = round((float) $order->total_amount * ($rate / 100), 2);

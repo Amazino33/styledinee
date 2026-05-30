@@ -61,6 +61,30 @@ class CouponService
     }
 
     /**
+     * Find the best auto-apply coupon for a customer at a given order total.
+     * Returns the Coupon model or null if none qualifies.
+     */
+    public function findAutoApply(float $orderTotal, Customer $customer): ?Coupon
+    {
+        $candidates = Coupon::where('auto_apply', true)
+            ->where('is_active', true)
+            ->where(fn ($q) => $q->whereNull('starts_at')->orWhere('starts_at', '<=', now()))
+            ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>=', now()))
+            ->where(fn ($q) => $q->whereNull('usage_limit')->orWhereColumn('used_count', '<', 'usage_limit'))
+            ->where(fn ($q) => $q->whereNull('min_order_amount')->orWhere('min_order_amount', '<=', $orderTotal))
+            ->orderByDesc('amount')
+            ->get();
+
+        foreach ($candidates as $coupon) {
+            if ($coupon->meetsAutoApplyCriteria($customer, $orderTotal)) {
+                return $coupon;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Apply a coupon to an order — records usage and updates order.
      * Call this only after validate() confirms valid.
      */

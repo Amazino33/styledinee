@@ -19,7 +19,7 @@ class EnquiryResource extends Resource
     protected static ?int $navigationSort = 3;
 
     public static function getNavigationIcon(): string { return 'heroicon-o-envelope'; }
-    public static function getNavigationGroup(): ?string { return 'Operations'; }
+    public static function getNavigationGroup(): ?string { return 'Customers'; }
 
     public static function canAccess(): bool
     {
@@ -90,3 +90,4 @@ class EnquiryResource extends Resource
         ];
     }
 }
+

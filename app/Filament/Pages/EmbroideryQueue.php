@@ -19,7 +19,7 @@ class EmbroideryQueue extends Page
     protected static ?int $navigationSort = 3;
 
     public static function getNavigationIcon(): string { return 'heroicon-o-sparkles'; }
-    public static function getNavigationGroup(): ?string { return 'Operations'; }
+    public static function getNavigationGroup(): ?string { return 'Production'; }
 
     public static function canAccess(): bool
     {
@@ -97,12 +97,13 @@ class EmbroideryQueue extends Page
         if ($cashiers->isNotEmpty()) {
             Notification::make()
                 ->title('Stage Advanced')
-                ->body("Order {$order?->reference} — {$item->description} → {$nextLabel} (by {$staffName}).")
+                ->body("Order {$order?->reference} â€” {$item->description} â†’ {$nextLabel} (by {$staffName}).")
                 ->sendToDatabase($cashiers);
         }
 
         if ($this->showDetailsModal) $this->closeDetailsModal();
 
-        Notification::make()->title("Done — advanced to {$nextLabel}.")->success()->send();
+        Notification::make()->title("Done â€” advanced to {$nextLabel}.")->success()->send();
     }
 }
+

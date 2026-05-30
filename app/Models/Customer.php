@@ -15,10 +15,12 @@ class Customer extends Authenticatable
 
     protected $fillable = [
         'user_id', 'name', 'email', 'phone', 'address',
-        'username', 'referred_by_username', 'affiliate_id',
+        'username', 'password', 'referred_by_username', 'affiliate_id',
     ];
 
-    protected $hidden = ['remember_token'];
+    protected $hidden = ['remember_token', 'password'];
+
+    protected $casts = ['password' => 'hashed'];
 
     // ── Accessors / mutators ───────────────────────────────────────────────────
 

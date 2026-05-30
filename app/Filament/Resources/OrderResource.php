@@ -27,7 +27,7 @@ class OrderResource extends Resource
     protected static ?int $navigationSort = 1;
 
     public static function getNavigationIcon(): string { return 'heroicon-o-clipboard-document-list'; }
-    public static function getNavigationGroup(): ?string { return 'Operations'; }
+    public static function getNavigationGroup(): ?string { return 'Orders'; }
 
     public static function canAccess(): bool
     {
@@ -103,8 +103,8 @@ class OrderResource extends Resource
                             'paid' => 'Paid',
                         ]),
 
-                    TextInput::make('total_amount')->numeric()->prefix('₦')->disabled($isStaff),
-                    TextInput::make('amount_paid')->numeric()->prefix('₦')
+                    TextInput::make('total_amount')->numeric()->prefix('â‚¦')->disabled($isStaff),
+                    TextInput::make('amount_paid')->numeric()->prefix('â‚¦')
                         ->disabled(! $user?->hasAnyRole(['admin', 'cashier'])),
 
                     DatePicker::make('pickup_date')->disabled($isStaff),
@@ -123,12 +123,12 @@ class OrderResource extends Resource
                         ->schema([
                             TextInput::make('description')->required()->columnSpan(3),
                             TextInput::make('quantity')->numeric()->default(1)->columnSpan(1),
-                            TextInput::make('unit_price')->numeric()->prefix('₦')->columnSpan(2)
+                            TextInput::make('unit_price')->numeric()->prefix('â‚¦')->columnSpan(2)
                                 ->live()
                                 ->afterStateUpdated(function ($state, Get $get, Set $set) {
                                     $set('subtotal', (float) $state * (int) $get('quantity'));
                                 }),
-                            TextInput::make('subtotal')->numeric()->prefix('₦')->disabled()->columnSpan(2),
+                            TextInput::make('subtotal')->numeric()->prefix('â‚¦')->disabled()->columnSpan(2),
                         ])
                         ->columns(8)
                         ->disabled($isStaff),
@@ -265,7 +265,7 @@ class OrderResource extends Resource
                             Textarea::make('notes')
                                 ->label('Notes for staff')
                                 ->rows(2)
-                                ->placeholder('Any special instructions…'),
+                                ->placeholder('Any special instructionsâ€¦'),
                         ];
                     })
                     ->action(function (Order $record, array $data) {
@@ -310,3 +310,4 @@ class OrderResource extends Resource
         ];
     }
 }
+

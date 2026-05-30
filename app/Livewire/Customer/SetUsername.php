@@ -9,9 +9,11 @@ use Livewire\Component;
 
 class SetUsername extends Component
 {
-    public string $name     = '';
-    public string $username = '';
-    public ?string $error   = null;
+    public string  $name      = '';
+    public string  $username  = '';
+    public string  $password  = '';
+    public string  $password_confirmation = '';
+    public ?string $error     = null;
 
     public function mount(): void
     {
@@ -28,6 +30,7 @@ class SetUsername extends Component
                 'unique:users,username',
                 'unique:affiliates,username',
             ],
+            'password' => ['nullable', 'string', 'min:6', 'confirmed'],
         ]);
 
         $this->error = null;
@@ -41,10 +44,16 @@ class SetUsername extends Component
         $name     = $this->name ?: $customer->name;
 
         DB::transaction(function () use ($customer, $name) {
-            $customer->update([
+            $data = [
                 'name'     => $name,
                 'username' => $this->username,
-            ]);
+            ];
+
+            if ($this->password) {
+                $data['password'] = $this->password; // cast 'hashed' handles bcrypt
+            }
+
+            $customer->update($data);
             Username::claim($this->username, 'customer', $customer->id);
         });
 

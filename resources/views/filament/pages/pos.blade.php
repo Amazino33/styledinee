@@ -735,37 +735,83 @@
 
         <div class="cart-foot">
 
-            <div class="pmethod-grid">
-                @foreach (['cash'=>'Cash','transfer'=>'Transfer','pos'=>'POS Terminal'] as $m=>$ml)
-                <button wire:click="$set('paymentMethod','{{ $m }}')" class="pm-btn {{ $paymentMethod===$m?'active':'' }}">{{ $ml }}</button>
+            {{-- ── Split payment rows ── --}}
+            <div style="display:flex;flex-direction:column;gap:.5rem;margin-bottom:.5rem;">
+                @foreach($splits as $i => $split)
+                <div style="display:flex;align-items:center;gap:.4rem;">
+
+                    {{-- Method pills --}}
+                    <div style="display:flex;gap:.25rem;flex-shrink:0;">
+                        @foreach(['cash'=>'Cash','transfer'=>'Transfer','pos'=>'POS'] as $m=>$ml)
+                        <button wire:click="$set('splits.{{ $i }}.method','{{ $m }}')"
+                            class="pm-btn {{ ($split['method']===$m)?'active':'' }}"
+                            style="padding:.3rem .45rem;font-size:.65rem;">{{ $ml }}</button>
+                        @endforeach
+                    </div>
+
+                    {{-- Amount --}}
+                    <div class="amount-wrap" style="flex:1;margin:0;">
+                        <span class="amount-prefix">₦</span>
+                        <input wire:model.live="splits.{{ $i }}.amount"
+                               type="number" min="0" step="0.01" placeholder="0.00"
+                               class="amount-input" style="font-size:.95rem;"
+                               {{ $i === 0 ? 'autofocus' : '' }}>
+                    </div>
+
+                    {{-- Fill remaining --}}
+                    @if($this->getBalance() > 0)
+                    <button wire:click="fillRemaining({{ $i }})"
+                        title="Fill remaining ₦{{ number_format($this->getBalance(),0) }}"
+                        style="flex-shrink:0;padding:.35rem .5rem;border:1px solid var(--border);border-radius:6px;background:transparent;cursor:pointer;font-size:.7rem;color:var(--text3);">
+                        +Rem
+                    </button>
+                    @endif
+
+                    {{-- Remove row --}}
+                    @if(count($splits) > 1)
+                    <button wire:click="removeSplit({{ $i }})"
+                        style="flex-shrink:0;width:24px;height:24px;border-radius:50%;border:1px solid var(--border);background:transparent;cursor:pointer;color:var(--text3);font-size:.85rem;display:flex;align-items:center;justify-content:center;">×</button>
+                    @endif
+                </div>
                 @endforeach
             </div>
 
-            <div class="amount-wrap" style="margin-bottom:.4rem; margin-top:.5rem;">
-                <span class="amount-prefix">₦</span>
-                <input wire:model.live="amountPaid" type="number" min="0" step="0.01" placeholder="0.00" class="amount-input" autofocus>
-            </div>
+            {{-- Add split row --}}
+            @if(count($splits) < 3)
+            <button wire:click="addSplit"
+                style="width:100%;padding:.35rem;border:1px dashed var(--border);border-radius:6px;background:transparent;cursor:pointer;font-size:.75rem;color:var(--text3);margin-bottom:.5rem;">
+                + Add another payment method
+            </button>
+            @endif
 
-            @if ($this->getTotal() > 0)
+            {{-- Quick amounts (based on remaining balance) --}}
+            @php $remaining = $this->getBalance(); $total = $this->getTotal(); @endphp
+            @if($total > 0 && $remaining > 0)
             @php $shown = 0; @endphp
             <div class="quick-amts">
-                <button wire:click="$set('amountPaid', {{ $this->getTotal() }})" class="q-btn">Exact</button>
-                @foreach ([500,1000,2000,5000,10000,20000,50000,100000,200000,500000] as $q)
-                    @if ($q > $this->getTotal() && $shown < 2)
-                    <button wire:click="$set('amountPaid', {{ $q }})" class="q-btn">₦{{ number_format($q,0) }}</button>
+                <button wire:click="fillRemaining({{ count($splits)-1 }})" class="q-btn">Exact</button>
+                @foreach([500,1000,2000,5000,10000,20000,50000,100000,200000,500000] as $q)
+                    @if($q > $this->getSplitTotal() && $shown < 2)
+                    <button wire:click="$set('splits.{{ count($splits)-1 }}.amount','{{ $q }}')" class="q-btn">₦{{ number_format($q,0) }}</button>
                     @php $shown++ @endphp
                     @endif
                 @endforeach
             </div>
             @endif
 
-            @if ($amountPaid !== '' && (float)$amountPaid > 0)
-                @if ($this->getChange() > 0)
+            {{-- Summary / change --}}
+            @if($this->getSplitTotal() > 0)
+                @if(count($splits) > 1)
+                <div style="font-size:.72rem;color:var(--text3);text-align:right;margin-bottom:.25rem;">
+                    Total tendered: <strong>₦{{ number_format($this->getSplitTotal(),0) }}</strong>
+                </div>
+                @endif
+                @if($this->getChange() > 0)
                 <div class="change-box change">
                     <span class="chg-lbl">Change Due</span>
                     <span class="chg-amt">₦{{ number_format($this->getChange(),2) }}</span>
                 </div>
-                @elseif ($this->getBalance() > 0)
+                @elseif($this->getBalance() > 0)
                 <div class="change-box balance">
                     <span class="chg-lbl">Balance Remaining</span>
                     <span class="chg-amt">₦{{ number_format($this->getBalance(),2) }}</span>
@@ -883,16 +929,23 @@
                         <option value="delivery">Home delivery</option>
                     </select>
                 </div>
-                <div class="pf" style="grid-column:1/-1;">
-                    <label>Est. Completion Date</label>
-                    <input wire:model.live="estimatedCompletionDate" type="date"
-                        min="{{ date('Y-m-d', strtotime('+1 day')) }}">
-                </div>
             </div>
             @if($deliveryType==='delivery')
             <div class="pf" style="margin-bottom:.55rem;">
                 <label>Delivery Address</label>
                 <input wire:model.live="customerAddress" type="text" placeholder="Full delivery address">
+            </div>
+            @endif
+
+            @if($this->hasProductionItems())
+            <div class="pf" style="margin-bottom:.55rem;">
+                <label style="display:flex;align-items:center;justify-content:space-between;">
+                    <span>Est. Completion Date</span>
+                    <span style="font-size:.65rem;font-weight:400;color:var(--muted);">Prefilled from product — override if needed</span>
+                </label>
+                <input wire:model.live="estimatedCompletionDate" type="date"
+                    min="{{ date('Y-m-d', strtotime('+1 day')) }}"
+                    style="width:100%;padding:.45rem .65rem;border:1px solid var(--border);border-radius:7px;background:var(--bg2);color:var(--text);font-size:.88rem;">
             </div>
             @endif
         </div>
