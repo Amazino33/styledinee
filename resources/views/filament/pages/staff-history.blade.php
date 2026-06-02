@@ -81,11 +81,18 @@
 /* Empty */
 .sh-empty { text-align:center; padding:3rem; color:var(--muted); }
 
+/* Sortable headers */
+.sh-table th.sortable { cursor:pointer; user-select:none; white-space:nowrap; }
+.sh-table th.sortable:hover { color:var(--text); }
+.sh-sort-icon { margin-left:.25rem; opacity:.4; font-size:.7rem; }
+.sh-sort-icon.active { opacity:1; color:var(--gold); }
+
 /* Pagination */
 .sh-pagination { padding:.75rem 1rem; border-top:1px solid var(--border); }
 </style>
 
 @php
+    $isAdmin = $this->isAdmin();
     $stats   = $this->getStats();
     $history = $this->getHistory();
 
@@ -120,9 +127,9 @@
         <div class="sh-stat-sub">{{ now()->format('F Y') }}</div>
     </div>
     <div class="sh-stat">
-        <div class="sh-stat-label">Daily average</div>
-        <div class="sh-stat-val">{{ $stats['avg_per_day'] }}</div>
-        <div class="sh-stat-sub">items / day</div>
+        <div class="sh-stat-label">Total value</div>
+        <div class="sh-stat-val" style="font-size:1.25rem;">₦{{ number_format($stats['total_value'], 0) }}</div>
+        <div class="sh-stat-sub">of completed work</div>
     </div>
 </div>
 
@@ -132,6 +139,15 @@
         <span class="sh-search-icon">⌕</span>
         <input wire:model.live.debounce.300ms="search" type="search" placeholder="Search order ref, customer, item…">
     </div>
+
+    @if($isAdmin)
+    <select wire:model.live="staffId" class="sh-select">
+        <option value="">All staff</option>
+        @foreach($this->getStaffList() as $id => $name)
+            <option value="{{ $id }}">{{ $name }}</option>
+        @endforeach
+    </select>
+    @endif
 
     <select wire:model.live="dept" class="sh-select">
         <option value="">All stages</option>
@@ -146,8 +162,8 @@
     <span style="font-size:.8rem;color:var(--muted);">—</span>
     <input wire:model.live="dateTo" type="date" class="sh-input" title="To date">
 
-    @if($search || $dept || $dateFrom || $dateTo)
-        <button wire:click="$set('search',''); $set('dept',''); $set('dateFrom',''); $set('dateTo','')"
+    @if($search || $dept || $dateFrom || $dateTo || $staffId)
+        <button wire:click="$set('search',''); $set('dept',''); $set('dateFrom',''); $set('dateTo',''); $set('staffId', null)"
                 class="sh-clear">✕ Clear</button>
     @endif
 </div>
@@ -162,13 +178,29 @@
     @else
         <table class="sh-table">
             <thead>
+                @php
+                    $icon = fn($col) => $sortCol === $col
+                        ? ($sortDir === 'asc' ? '↑' : '↓')
+                        : '↕';
+                    $cls  = fn($col) => 'sh-sort-icon' . ($sortCol === $col ? ' active' : '');
+                @endphp
                 <tr>
-                    <th>Stage</th>
+                    <th class="sortable" wire:click="sortBy('department')">
+                        Stage <span class="{{ $cls('department') }}">{{ $icon('department') }}</span>
+                    </th>
                     <th>Item</th>
                     <th>Order</th>
                     <th>Customer</th>
-                    <th>Assigned</th>
-                    <th>Completed</th>
+                    @if($isAdmin)<th>Staff</th>@endif
+                    <th class="sortable" wire:click="sortBy('subtotal')" style="text-align:right;">
+                        Amount <span class="{{ $cls('subtotal') }}">{{ $icon('subtotal') }}</span>
+                    </th>
+                    <th class="sortable" wire:click="sortBy('assigned_at')">
+                        Assigned <span class="{{ $cls('assigned_at') }}">{{ $icon('assigned_at') }}</span>
+                    </th>
+                    <th class="sortable" wire:click="sortBy('completed_at')">
+                        Completed <span class="{{ $cls('completed_at') }}">{{ $icon('completed_at') }}</span>
+                    </th>
                     <th>Duration</th>
                 </tr>
             </thead>
@@ -202,6 +234,16 @@
                             @if($order?->customer?->phone)
                                 <div class="sh-cust">{{ $order->customer->phone }}</div>
                             @endif
+                        </td>
+                        @if($isAdmin)
+                        <td>
+                            <div class="sh-name" style="font-weight:500;">{{ $row->assignedTo?->name ?? '—' }}</div>
+                        </td>
+                        @endif
+                        <td style="text-align:right;">
+                            <span style="font-weight:700;color:var(--text);">
+                                ₦{{ number_format($item?->subtotal ?? 0, 0) }}
+                            </span>
                         </td>
                         <td><span class="sh-time">{{ $row->assigned_at?->format('d M Y, H:i') ?? '—' }}</span></td>
                         <td><span class="sh-time" style="color:#16a34a;font-weight:600;">{{ $row->completed_at?->format('d M Y, H:i') ?? '—' }}</span></td>
