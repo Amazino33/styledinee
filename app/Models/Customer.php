@@ -101,4 +101,14 @@ class Customer extends Authenticatable
     {
         return $this->measurements()->where('product_id', $productId)->first();
     }
+
+    public function bodyMeasurements(): HasMany
+    {
+        return $this->hasMany(CustomerBodyMeasurement::class);
+    }
+
+    public function activeBodyMeasurement(): ?CustomerBodyMeasurement
+    {
+        return $this->bodyMeasurements()->where('is_active', true)->latest()->first();
+    }
 }

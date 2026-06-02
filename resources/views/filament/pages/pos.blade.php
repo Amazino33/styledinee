@@ -102,17 +102,65 @@
 .svc-pill:hover { border-color:var(--gold); color:var(--gold); background:var(--gold-light); }
 .svc-pill-price { color:var(--muted); font-size:.65rem; }
 
-/* ── Order Type Tabs ── */
+/* ── Order Category Tabs ── */
+.otype-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:.5rem; }
+.otype-see-all {
+    font-size:.65rem; font-weight:600; color:var(--gold); background:none; border:none;
+    cursor:pointer; font-family:inherit; letter-spacing:.04em; padding:0;
+    text-decoration:underline; text-underline-offset:2px; transition:opacity .15s;
+}
+.otype-see-all:hover { opacity:.7; }
 .otype-wrap { display:grid; grid-template-columns:repeat(4,1fr); gap:.4rem; }
 @media(max-width:600px){ .otype-wrap{grid-template-columns:repeat(2,1fr);} }
 .otype-btn {
     padding:.45rem .25rem; border:2px solid var(--border); border-radius:7px; background:transparent;
     font-size:.68rem; font-weight:600; color:var(--text3); cursor:pointer; transition:all .15s;
     font-family:inherit; display:flex; flex-direction:column; align-items:center; gap:.2rem; line-height:1.2;
+    text-align:center;
 }
 .otype-btn:hover { border-color:var(--gold); color:var(--gold); }
 .otype-btn.active { border-color:var(--gold); background:var(--gold-light); color:#92740a; }
 .dark .otype-btn.active { color:var(--gold); }
+.otype-btn .otype-parent { font-size:.55rem; color:var(--muted); font-weight:400; }
+
+/* ── Category Modal ── */
+.cat-modal-backdrop {
+    position:fixed; inset:0; z-index:9999;
+    background:rgba(0,0,0,.55); backdrop-filter:blur(2px);
+    display:flex; align-items:center; justify-content:center; padding:1rem;
+}
+.cat-modal {
+    background:var(--bg); border:1px solid var(--border2); border-radius:14px;
+    width:100%; max-width:520px; max-height:80vh;
+    display:flex; flex-direction:column; overflow:hidden;
+    box-shadow:0 20px 60px rgba(0,0,0,.35);
+}
+.cat-modal-head {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:.85rem 1rem .65rem; border-bottom:1px solid var(--border); flex-shrink:0;
+}
+.cat-modal-title { font-size:.9rem; font-weight:700; color:var(--text); }
+.cat-modal-close {
+    background:none; border:none; cursor:pointer; font-size:1.1rem;
+    color:var(--muted); padding:.2rem .4rem; border-radius:5px; transition:color .15s;
+}
+.cat-modal-close:hover { color:var(--text); }
+.cat-modal-search {
+    padding:.65rem 1rem; border-bottom:1px solid var(--border); flex-shrink:0;
+}
+.cat-modal-search input {
+    width:100%; padding:.5rem .75rem .5rem 2rem; border:1px solid var(--border2);
+    border-radius:8px; background:var(--bg2); font-size:.875rem; outline:none;
+    font-family:inherit; color:var(--text); box-sizing:border-box;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%239ca3af' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:.55rem center; background-size:1rem;
+    transition:border-color .15s;
+}
+.cat-modal-search input:focus { border-color:var(--gold); box-shadow:0 0 0 3px rgba(201,168,76,.15); }
+.cat-modal-body { flex:1; overflow-y:auto; padding:.65rem 1rem 1rem; }
+.cat-modal-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:.45rem; }
+@media(max-width:400px){ .cat-modal-grid{grid-template-columns:repeat(2,1fr);} }
+.cat-modal-empty { text-align:center; color:var(--muted); font-size:.85rem; padding:2rem 0; }
 
 /* ── Cart ── */
 .cart-scroll { flex:1; overflow-y:auto; overflow-x:hidden; padding:.75rem .85rem 0; box-sizing:border-box; }
@@ -144,7 +192,36 @@
 .mi-price { width:80px; text-align:right; flex-shrink:0; }
 .mi-sub { font-size:.78rem; font-weight:600; text-align:right; color:var(--text); padding-right:.25rem; }
 
-/* ── Production path select ── */
+/* ── BOM in cart item ── */
+.ci-bom { padding:.35rem .75rem .5rem; border-top:1px dashed var(--border); display:flex; flex-direction:column; gap:.2rem; }
+.ci-bom-row { display:flex; align-items:center; gap:.5rem; font-size:.72rem; }
+.ci-bom-name { flex:1; color:var(--muted); }
+.ci-bom-qty { font-weight:500; }
+.ci-bom-price { font-weight:600; color:var(--text); white-space:nowrap; }
+.ci-bom-rm { background:none; border:none; cursor:pointer; color:var(--muted); font-size:.7rem; padding:0 .1rem; line-height:1; transition:color .15s; }
+.ci-bom-rm:hover { color:#dc2626; }
+.ci-bom-total { font-size:.7rem; font-weight:700; color:var(--gold); padding-top:.25rem; border-top:1px solid var(--border); text-align:right; margin-top:.1rem; }
+.ci-bom-removed { display:flex; flex-wrap:wrap; align-items:baseline; gap:.25rem .4rem; font-size:.68rem; padding:.3rem .4rem; margin-top:.15rem; background:rgba(239,68,68,.08); border:1px dashed rgba(239,68,68,.3); border-radius:6px; color:var(--muted); }
+.ci-bom-removed-label { font-weight:700; color:#ef4444; white-space:nowrap; }
+.ci-bom-removed-name { text-decoration:line-through; color:var(--text); }
+.ci-bom-removed-reason { font-style:italic; }
+.ci-bom-removed-meta { opacity:.65; white-space:nowrap; margin-left:auto; }
+/* ── Remove BOM reason modal ── */
+.rm-bom-field { display:flex; flex-direction:column; gap:.4rem; }
+.rm-bom-field label { font-size:.8rem; font-weight:600; color:var(--text); }
+.rm-bom-field textarea { width:100%; background:var(--bg2); border:1px solid var(--border); border-radius:8px; color:var(--text); padding:.55rem .7rem; font-size:.83rem; resize:vertical; min-height:72px; outline:none; transition:border-color .15s; }
+.rm-bom-field textarea:focus { border-color:var(--accent); }
+.rm-bom-material { font-size:.8rem; color:var(--muted); margin-bottom:.9rem; background:var(--bg2); padding:.5rem .75rem; border-radius:8px; }
+
+/* ── Production path badge (replaces old path-select) ── */
+.path-badge {
+    font-size:.58rem; font-weight:700; text-transform:uppercase; letter-spacing:.04em;
+    padding:.1rem .4rem; border-radius:4px; flex-shrink:0;
+    background:rgba(201,168,76,.12); color:var(--gold); border:1px solid rgba(201,168,76,.3);
+}
+.dark .path-badge { background:rgba(201,168,76,.1); }
+
+/* ── Production path select (kept for legacy, hidden in POS) ── */
 .path-select {
     font-size:.62rem; font-weight:600; padding:.18rem .35rem;
     border:1px solid var(--border); border-radius:4px;
@@ -293,12 +370,26 @@
 .mfield input:focus { border-color:var(--gold); }
 
 /* ── BOM list ── */
-.bom-item { display:grid; grid-template-columns:1fr 80px 60px; gap:.5rem; align-items:center; padding:.4rem 0; border-bottom:1px solid var(--bg3); }
+.bom-item { display:grid; grid-template-columns:1fr 80px 60px auto; gap:.5rem; align-items:center; padding:.4rem 0; border-bottom:1px solid var(--bg3); }
 .dark .bom-item { border-color:var(--border); }
+.bom-item--pending { opacity:.5; pointer-events:none; }
 .bom-name { font-size:.82rem; color:var(--text2); }
 .bom-unit { font-size:.72rem; color:var(--muted); }
 .bom-qty-input { width:70px; padding:.3rem .4rem; border:1px solid var(--border2); border-radius:5px; font-size:.8rem; text-align:center; font-family:inherit; background:var(--bg2); outline:none; color:var(--text); }
 .bom-qty-input:focus { border-color:var(--gold); }
+.bom-rm-btn { background:none; border:none; cursor:pointer; color:var(--muted); font-size:.75rem; line-height:1; padding:.15rem .25rem; border-radius:4px; transition:color .15s,background .15s; }
+.bom-rm-btn:hover { color:#dc2626; background:rgba(220,38,38,.1); }
+.bom-remove-inline { margin:.5rem 0 .35rem; padding:.65rem .75rem; background:rgba(239,68,68,.07); border:1px dashed rgba(239,68,68,.35); border-radius:8px; display:flex; flex-direction:column; gap:.4rem; }
+.bom-remove-inline-title { font-size:.78rem; color:var(--text); margin:0; }
+.bom-remove-inline-input { width:100%; background:var(--bg2); border:1px solid var(--border); border-radius:6px; color:var(--text); padding:.4rem .6rem; font-size:.78rem; resize:none; outline:none; font-family:inherit; }
+.bom-remove-inline-input:focus { border-color:#dc2626; }
+.bom-remove-inline-err { font-size:.72rem; color:#ef4444; }
+.bom-remove-inline-actions { display:flex; justify-content:flex-end; gap:.4rem; }
+.bom-removed-note { display:flex; flex-wrap:wrap; align-items:baseline; gap:.25rem .4rem; font-size:.72rem; padding:.3rem .5rem; margin-top:.2rem; background:rgba(239,68,68,.07); border:1px dashed rgba(239,68,68,.25); border-radius:6px; color:var(--muted); }
+.bom-removed-note-icon { color:#ef4444; font-weight:700; }
+.bom-removed-note-name { text-decoration:line-through; color:var(--text2); }
+.bom-removed-note-reason { font-style:italic; }
+.bom-removed-note-meta { opacity:.6; margin-left:auto; white-space:nowrap; font-size:.68rem; }
 
 /* ── Washing section ── */
 .wash-section { margin-top:1rem; padding:.75rem; background:var(--bg2); border-radius:8px; border:1px solid var(--border); }
@@ -470,22 +561,85 @@
     {{-- ── LEFT: Product Grid ── --}}
     <div class="pos-left">
 
-        {{-- Order Type --}}
+        {{-- Category grid (all categories flat, max 8 shown + See All modal) --}}
+        @php
+            $allCats     = $this->getCategories();
+            $visibleCats = $allCats->take(8);
+            $totalCats   = $allCats->count();
+        @endphp
+
         <div class="pcard" style="margin-bottom:.75rem;">
-            <span class="plbl">Order Type</span>
-            <div class="otype-wrap">
-                @foreach (['tailoring'=>['✦','Tailoring'],'dry_cleaning'=>['◈','Dry Cleaning'],'alteration'=>['⌖','Alteration'],'pickup_delivery'=>['⟳','Pickup & Del.']] as $v=>[$ico,$lbl])
-                <button wire:click="$set('orderType','{{ $v }}')" class="otype-btn {{ $orderType===$v?'active':'' }}">
-                    <span>{{ $ico }}</span><span>{{ $lbl }}</span>
+            <div class="otype-header">
+                <span class="plbl" style="margin-bottom:0">Category</span>
+                <button class="otype-see-all" wire:click="openCategoryModal">
+                    See all ({{ $totalCats }})
                 </button>
+            </div>
+
+            <div class="otype-wrap">
+                <button wire:click="selectCategory(0, '')"
+                    class="otype-btn {{ $categoryFilter === null ? 'active' : '' }}">
+                    <span>🗂</span><span>All</span>
+                </button>
+                @foreach($visibleCats as $cat)
+                    <button wire:click="selectCategory({{ $cat->id }}, '{{ $cat->slug }}')"
+                        class="otype-btn {{ $categoryFilter === $cat->id ? 'active' : '' }}">
+                        @if($cat->icon)<span>{{ $cat->icon }}</span>@endif
+                        <span>{{ $cat->name }}</span>
+                        @if($cat->parent_id)
+                            <span class="otype-parent">{{ $cat->parent?->name }}</span>
+                        @endif
+                    </button>
                 @endforeach
             </div>
         </div>
 
+        {{-- ── Category "See All" Modal ── --}}
+        @if($showCategoryModal)
+        <div class="cat-modal-backdrop" wire:click.self="closeCategoryModal">
+            <div class="cat-modal">
+                <div class="cat-modal-head">
+                    <span class="cat-modal-title">All Categories</span>
+                    <button class="cat-modal-close" wire:click="closeCategoryModal">✕</button>
+                </div>
+                <div class="cat-modal-search">
+                    <input
+                        wire:model.live.debounce.200ms="categoryModalSearch"
+                        type="search"
+                        placeholder="Search categories…"
+                        autofocus>
+                </div>
+                <div class="cat-modal-body">
+                    @php $modalCats = $this->getModalCategories(); @endphp
+                    @if($modalCats->isEmpty())
+                        <p class="cat-modal-empty">No categories match "{{ $categoryModalSearch }}"</p>
+                    @else
+                        <div class="cat-modal-grid">
+                            <button wire:click="selectCategory(0, '')"
+                                class="otype-btn {{ $categoryFilter === null ? 'active' : '' }}">
+                                <span>🗂</span><span>All</span>
+                            </button>
+                            @foreach($modalCats as $cat)
+                                <button wire:click="selectCategory({{ $cat->id }}, '{{ $cat->slug }}')"
+                                    class="otype-btn {{ $categoryFilter === $cat->id ? 'active' : '' }}">
+                                    @if($cat->icon)<span>{{ $cat->icon }}</span>@endif
+                                    <span>{{ $cat->name }}</span>
+                                    @if($cat->parent_id)
+                                        <span class="otype-parent">{{ $cat->parent?->name }}</span>
+                                    @endif
+                                </button>
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </div>
+        @endif
+
         {{-- Product Search --}}
         <div class="pos-search-wrap">
             <span class="pos-search-icon">⌕</span>
-            <input wire:model.live.debounce.300ms="search" type="search" placeholder="Search products by name or category…">
+            <input wire:model.live.debounce.300ms="search" type="search" placeholder="Search products…">
         </div>
 
         {{-- Products --}}
@@ -583,20 +737,44 @@
                         <button wire:click="removeItem({{ $i }})" class="ci-rm">✕</button>
                     </div>
                     <div class="item-bot">
-                        <select wire:model.live="items.{{ $i }}.production_path_key"
-                            class="path-select {{ $pathKey !== 'none' ? 'has-path' : '' }}" style="flex:1;min-width:0;">
-                            <option value="none">Ready-made</option>
-                            <option value="sewing_only">Sewing → Finishing</option>
-                            <option value="sewing_embroidery">Sewing → Embroidery → Finishing</option>
-                            <option value="sewing_printing">Sewing → Printing → Finishing</option>
-                            <option value="sewing_embroidery_printing">Sewing → Embroidery → Printing → Finishing</option>
-                            <option value="embroidery_only">Embroidery → Finishing</option>
-                            <option value="printing_only">Printing only</option>
-                            <option value="embroidery_printing">Embroidery → Printing → Finishing</option>
-                        </select>
+                        @php $pathKey = $item['production_path_key'] ?? 'none'; @endphp
+                        @if($pathKey !== 'none')
+                        <span class="path-badge">{{ \App\Models\OrderItem::PATH_LABELS[$pathKey] ?? $pathKey }}</span>
+                        @endif
                         <input wire:model.live="items.{{ $i }}.qty" type="number" min="1" class="ci-input">
                         <div class="ci-price">₦{{ number_format((float)($item['subtotal']??0),0) }}</div>
                     </div>
+
+                    {{-- BOM breakdown --}}
+                    @if(!empty($item['bom']) || !empty($item['bom_removals']))
+                    <div class="ci-bom">
+                        @foreach($item['bom'] as $bi => $bline)
+                        <div class="ci-bom-row">
+                            <span class="ci-bom-name">{{ $bline['name'] }}
+                                <span class="ci-bom-qty">× {{ $bline['quantity'] }}{{ $bline['unit'] ? ' '.$bline['unit'] : '' }}</span>
+                            </span>
+                            <span class="ci-bom-price">
+                                @if($bline['line_total'] > 0)₦{{ number_format($bline['line_total'], 0) }}@else—@endif
+                            </span>
+                            <button type="button"
+                                wire:click="openRemoveBomModal({{ $i }}, {{ $bi }})"
+                                class="ci-bom-rm" title="Remove material">✕</button>
+                        </div>
+                        @endforeach
+                        @php $bomTotal = collect($item['bom'])->sum('line_total'); @endphp
+                        @if($bomTotal > 0)
+                        <div class="ci-bom-total">Material cost: ₦{{ number_format($bomTotal, 0) }}</div>
+                        @endif
+                        @foreach($item['bom_removals'] ?? [] as $removal)
+                        <div class="ci-bom-removed">
+                            <span class="ci-bom-removed-label">⊗ Removed:</span>
+                            <span class="ci-bom-removed-name">{{ $removal['name'] }} × {{ $removal['quantity'] }}{{ $removal['unit'] ? ' '.$removal['unit'] : '' }}</span>
+                            <span class="ci-bom-removed-reason">Reason: {{ $removal['reason'] }}</span>
+                            <span class="ci-bom-removed-meta">— {{ $removal['removed_by'] }}, {{ $removal['removed_at'] }}</span>
+                        </div>
+                        @endforeach
+                    </div>
+                    @endif
                 </div>
                 @else
                 @php $pathKey = $item['production_path_key'] ?? 'none'; @endphp
@@ -606,17 +784,6 @@
                         <button wire:click="removeItem({{ $i }})" class="ci-rm" title="Remove">✕</button>
                     </div>
                     <div class="item-bot">
-                        <select wire:model.live="items.{{ $i }}.production_path_key"
-                            class="path-select {{ $pathKey !== 'none' ? 'has-path' : '' }}" style="flex:1;min-width:0;">
-                            <option value="none">Ready-made</option>
-                            <option value="sewing_only">Sewing → Finishing</option>
-                            <option value="sewing_embroidery">Sewing → Embroidery → Finishing</option>
-                            <option value="sewing_printing">Sewing → Printing → Finishing</option>
-                            <option value="sewing_embroidery_printing">Sewing → Embroidery → Printing → Finishing</option>
-                            <option value="embroidery_only">Embroidery → Finishing</option>
-                            <option value="printing_only">Printing only</option>
-                            <option value="embroidery_printing">Embroidery → Printing → Finishing</option>
-                        </select>
                         <input wire:model.live="items.{{ $i }}.qty" type="number" min="1" step="1" class="mi mi-qty">
                         <input wire:model.live="items.{{ $i }}.unit_price" type="number" min="0" step="0.01" placeholder="₦ Price" class="mi mi-price">
                     </div>
@@ -1173,13 +1340,41 @@
             @if ($modalStep === 4)
             <p class="modal-desc">Review the BOM and washing requirements before adding to cart.</p>
 
-            @if(count($modalBom) > 0)
+            @if(count($modalBom) > 0 || count($modalBomRemovals) > 0)
             <span class="plbl" style="margin-bottom:.4rem; display:block;">Materials Needed (BOM)</span>
             @foreach($modalBom as $bi => $bm)
-            <div class="bom-item">
+            <div class="bom-item {{ ($showModalBomRemove && $modalBomRemoveIndex === $bi) ? 'bom-item--pending' : '' }}">
                 <span class="bom-name">{{ $bm['name'] }}</span>
-                <input wire:model.live="modalBom.{{ $bi }}.quantity" type="number" step="0.1" min="0" class="bom-qty-input">
+                <input wire:model.live="modalBom.{{ $bi }}.quantity" type="number" step="0.1" min="0" class="bom-qty-input"
+                    {{ ($showModalBomRemove && $modalBomRemoveIndex === $bi) ? 'disabled' : '' }}>
                 <span class="bom-unit">{{ $bm['unit'] }}</span>
+                <button type="button" wire:click="openModalBomRemove({{ $bi }})"
+                    class="bom-rm-btn" title="Remove material">✕</button>
+            </div>
+            @endforeach
+
+            {{-- Inline reason form --}}
+            @if($showModalBomRemove && isset($modalBom[$modalBomRemoveIndex]))
+            @php $pendingBm = $modalBom[$modalBomRemoveIndex]; @endphp
+            <div class="bom-remove-inline">
+                <p class="bom-remove-inline-title">Removing <strong>{{ $pendingBm['name'] }}</strong> — enter a reason:</p>
+                <textarea wire:model.live="modalBomRemoveReason"
+                    placeholder="e.g. Customer requested substitution, out of stock…"
+                    rows="2" class="bom-remove-inline-input"></textarea>
+                @error('modalBomRemoveReason')<span class="bom-remove-inline-err">{{ $message }}</span>@enderror
+                <div class="bom-remove-inline-actions">
+                    <button type="button" wire:click="cancelModalBomRemove" class="mbtn mbtn-ghost" style="font-size:.75rem;padding:.3rem .7rem;">Cancel</button>
+                    <button type="button" wire:click="confirmModalBomRemove" class="mbtn" style="font-size:.75rem;padding:.3rem .7rem;background:#dc2626;color:#fff;">Confirm Remove</button>
+                </div>
+            </div>
+            @endif
+
+            @foreach($modalBomRemovals as $removal)
+            <div class="bom-removed-note">
+                <span class="bom-removed-note-icon">⊗</span>
+                <span class="bom-removed-note-name">{{ $removal['name'] }} × {{ $removal['quantity'] }}{{ $removal['unit'] ? ' '.$removal['unit'] : '' }}</span>
+                <span class="bom-removed-note-reason">Reason: {{ $removal['reason'] }}</span>
+                <span class="bom-removed-note-meta">{{ $removal['removed_by'] }}, {{ $removal['removed_at'] }}</span>
             </div>
             @endforeach
             @else
@@ -1251,5 +1446,43 @@ function closeVariantImage() {
 }
 function _varImgEsc(e) { if (e.key === 'Escape') closeVariantImage(); }
 </script>
+
+@if($showRemoveBomModal)
+@php
+    $rmItem = $items[$removeBomItemIndex] ?? null;
+    $rmLine = $rmItem['bom'][$removeBomBomIndex] ?? null;
+@endphp
+<div class="modal-backdrop" wire:click.self="cancelRemoveBom">
+    <div class="modal-box" style="max-width:420px;">
+        <div class="modal-head">
+            <span class="modal-title">Remove Material</span>
+            <button wire:click="cancelRemoveBom" class="modal-close">✕</button>
+        </div>
+        <div class="modal-body">
+            @if($rmLine)
+            <div class="rm-bom-material">
+                Removing <strong>{{ $rmLine['name'] }}</strong>
+                × {{ $rmLine['quantity'] }}{{ $rmLine['unit'] ? ' '.$rmLine['unit'] : '' }}
+                from <em>{{ $rmItem['description'] ?? '' }}</em>
+            </div>
+            @endif
+            <div class="rm-bom-field">
+                <label for="rm-bom-reason">Reason for removal <span style="color:#ef4444">*</span></label>
+                <textarea id="rm-bom-reason" wire:model.live="removeBomReason"
+                    placeholder="e.g. Customer requested substitution, out of stock…"
+                    rows="3"></textarea>
+                @error('removeBomReason')<span style="font-size:.75rem;color:#ef4444">{{ $message }}</span>@enderror
+            </div>
+        </div>
+        <div class="modal-foot">
+            <button wire:click="cancelRemoveBom" class="mbtn mbtn-ghost">Cancel</button>
+            <button wire:click="confirmRemoveBomLine" class="mbtn"
+                style="background:#dc2626;color:#fff;">
+                Remove Material
+            </button>
+        </div>
+    </div>
+</div>
+@endif
 
 </x-filament-panels::page>

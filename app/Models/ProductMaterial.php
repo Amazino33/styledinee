@@ -16,8 +16,9 @@ class ProductMaterial extends Model
         return $this->belongsTo(Product::class);
     }
 
+    /** The product that serves as a material in this BOM line. */
     public function material(): BelongsTo
     {
-        return $this->belongsTo(Material::class);
+        return $this->belongsTo(Product::class, 'material_id');
     }
 }

@@ -9,12 +9,15 @@ class Product extends Model
 {
     protected $fillable = [
         'name', 'slug', 'description', 'price', 'stock_quantity',
-        'category', 'image', 'is_active', 'sort_order',
-        'production_type', 'product_type', 'estimated_production_hours', 'is_embroidery',
+        'category', 'image', 'is_active', 'is_published', 'is_material', 'unit', 'sort_order',
+        'production_type', 'product_type', 'order_type_id',
+        'estimated_production_hours', 'is_embroidery',
     ];
 
     protected $casts = [
         'is_active'                  => 'boolean',
+        'is_published'               => 'boolean',
+        'is_material'                => 'boolean',
         'is_embroidery'              => 'boolean',
         'price'                      => 'decimal:2',
         'estimated_production_hours' => 'integer',
@@ -27,6 +30,11 @@ class Product extends Model
                 $product->slug = Str::slug($product->name);
             }
         });
+    }
+
+    public function orderType()
+    {
+        return $this->belongsTo(OrderType::class);
     }
 
     public function orderItems()

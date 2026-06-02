@@ -51,6 +51,17 @@ class OrderItem extends Model
     ];
 
     // Named production path presets
+    public const PATH_LABELS = [
+        'none'                       => 'Ready-made',
+        'sewing_only'                => 'Sewing → Finishing',
+        'sewing_embroidery'          => 'Sewing → Embroidery → Finishing',
+        'sewing_printing'            => 'Sewing → Printing → Finishing',
+        'sewing_embroidery_printing' => 'Sewing → Embroidery → Printing → Finishing',
+        'embroidery_only'            => 'Embroidery → Finishing',
+        'printing_only'              => 'Printing only',
+        'embroidery_printing'        => 'Embroidery → Printing → Finishing',
+    ];
+
     public const PATHS = [
         'none'                       => [],
         'sewing_only'                => ['sewing', 'finishing', 'ready'],
@@ -62,17 +73,34 @@ class OrderItem extends Model
         'embroidery_printing'        => ['embroidery', 'printing', 'finishing', 'ready'],
     ];
 
-    // Auto-detect path from product type
-    public static function detectPath(Product $product): string
+    /**
+     * Auto-detect the correct production path from product properties and
+     * the category's default path key. Product-level flags take precedence
+     * so that e.g. a tailoring order with an embroidery product gets the
+     * right combined path automatically.
+     */
+    public static function detectPath(Product $product, string $categoryPathKey = 'none'): string
     {
-        return match ($product->product_type) {
-            'embroidery' => 'embroidery_only',
-            'printing'   => 'printing_only',
-            'ready_made',
-            'fabric',
-            'accessory'  => 'none',
-            default      => 'sewing_only', // garment / production products
-        };
+        // Non-production products always skip the pipeline
+        if (! $product->requiresProduction()) return 'none';
+
+        // Start from the category's declared default
+        $base = $categoryPathKey !== 'none' ? $categoryPathKey : 'sewing_only';
+
+        // Product-type overrides
+        if ($product->product_type === 'embroidery') return 'embroidery_only';
+        if ($product->product_type === 'printing')   return 'printing_only';
+
+        // A sewing product that also carries embroidery work
+        if ($product->is_embroidery) {
+            return match ($base) {
+                'sewing_only'     => 'sewing_embroidery',
+                'sewing_printing' => 'sewing_embroidery_printing',
+                default           => 'sewing_embroidery',
+            };
+        }
+
+        return $base;
     }
 
     // ── Relationships ───────────────────────────────────────

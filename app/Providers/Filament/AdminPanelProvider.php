@@ -56,6 +56,7 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
+            ->profile(\App\Filament\Pages\EditProfile::class)
             ->brandName('Styledinee')
             ->colors([
                 'primary' => Color::hex('#C9A84C'),

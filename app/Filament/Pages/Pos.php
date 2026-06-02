@@ -14,6 +14,7 @@ use App\Services\NotificationService;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Collection as BaseCollection;
 use Illuminate\Support\Str;
 use Livewire\WithFileUploads;
 
@@ -58,7 +59,10 @@ class Pos extends Page
     public bool $orderSummaryCollapsed = false;
 
     // â”€â”€ Product Grid State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    public string $search = '';
+    public string $search              = '';
+    public ?int   $categoryFilter      = null;
+    public bool   $showCategoryModal   = false;
+    public string $categoryModalSearch = '';
 
     // â”€â”€ Variant Picker Modal (ready-made products with variants) â”€â”€
     public bool  $showVariantModal          = false;
@@ -105,6 +109,10 @@ class Pos extends Page
     public string $modalCustomerEmail  = '';
     public array  $modalMeasurements   = [];
     public array  $modalBom            = [];
+    public array  $modalBomRemovals    = [];
+    public bool   $showModalBomRemove  = false;
+    public int    $modalBomRemoveIndex = -1;
+    public string $modalBomRemoveReason = '';
     public bool   $modalWashingRequired = true;
     public string $modalWashingSkipReason = '';
     public string $modalNotes         = '';
@@ -115,6 +123,12 @@ class Pos extends Page
     public bool $showCustomerModal = false;
     public bool $processAfterCustomer = false;
 
+    // â”€â”€ BOM Removal Modal State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    public bool   $showRemoveBomModal = false;
+    public int    $removeBomItemIndex = -1;
+    public int    $removeBomBomIndex  = -1;
+    public string $removeBomReason    = '';
+
     // â”€â”€ Post-sale State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     public bool $showReceipt = false;
     public ?int  $completedOrderId = null;
@@ -123,17 +137,144 @@ class Pos extends Page
     // â”€â”€ Lifecycle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     public function mount(): void
     {
-        $this->addBlankItem();
+        $saved = session()->get($this->cartSessionKey());
+
+        if ($saved) {
+            $this->orderType               = $saved['orderType']               ?? 'tailoring';
+            $this->customerName            = $saved['customerName']            ?? '';
+            $this->customerPhone           = $saved['customerPhone']           ?? '';
+            $this->customerEmail           = $saved['customerEmail']           ?? '';
+            $this->customerAddress         = $saved['customerAddress']         ?? '';
+            $this->deliveryType            = $saved['deliveryType']            ?? 'pickup';
+            $this->estimatedCompletionDate = $saved['estimatedCompletionDate'] ?? '';
+            $this->notes                   = $saved['notes']                   ?? '';
+            $this->items                   = $saved['items']                   ?? [];
+            $this->splits                  = $saved['splits']                  ?? [['method' => 'cash', 'amount' => '']];
+            $this->posStep                 = $saved['posStep']                 ?? 'order';
+            $this->customerId              = $saved['customerId']              ?? null;
+
+            if (empty($this->items)) {
+                $this->addBlankItem();
+            }
+        } else {
+            $this->addBlankItem();
+        }
+    }
+
+    public function dehydrate(): void
+    {
+        if (! $this->showReceipt) {
+            $this->saveCartToSession();
+        }
+    }
+
+    private function cartSessionKey(): string
+    {
+        return 'pos_cart_' . auth()->id();
+    }
+
+    private function saveCartToSession(): void
+    {
+        session()->put($this->cartSessionKey(), [
+            'orderType'               => $this->orderType,
+            'customerName'            => $this->customerName,
+            'customerPhone'           => $this->customerPhone,
+            'customerEmail'           => $this->customerEmail,
+            'customerAddress'         => $this->customerAddress,
+            'deliveryType'            => $this->deliveryType,
+            'estimatedCompletionDate' => $this->estimatedCompletionDate,
+            'notes'                   => $this->notes,
+            'items'                   => $this->items,
+            'splits'                  => $this->splits,
+            'posStep'                 => $this->posStep,
+            'customerId'              => $this->customerId,
+        ]);
+    }
+
+    private function clearCartSession(): void
+    {
+        session()->forget($this->cartSessionKey());
     }
 
     // â”€â”€ Product Grid â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     public function getProducts(): Collection
     {
+        $search         = $this->search;
+        $categoryFilter = $this->categoryFilter;
+
         return Product::where('is_active', true)
-            ->when($this->search, fn ($q) => $q->where('name', 'like', "%{$this->search}%")
-                ->orWhere('category', 'like', "%{$this->search}%"))
+            ->when($categoryFilter && ! $search, function ($q) use ($categoryFilter) {
+                $cat = \App\Models\OrderType::with('children.children.children.children')
+                    ->find($categoryFilter);
+                if ($cat) {
+                    $q->whereIn('order_type_id', $cat->selfAndDescendantIds());
+                }
+            })
+            ->when($search, fn ($q) => $q->where('name', 'like', '%' . $search . '%')
+                ->orWhere('category', 'like', '%' . $search . '%'))
             ->orderBy('sort_order')
             ->get();
+    }
+
+    /**
+     * All active categories in depth-first tree order (root first, children nested).
+     * Used for the main grid (take 8) and the "See All" modal.
+     */
+    public function getCategories(): BaseCollection
+    {
+        $all    = \App\Models\OrderType::where('is_active', true)->orderBy('sort_order')->get()->keyBy('id');
+        $result = collect();
+        $visited = [];
+
+        $walk = function ($parentId) use (&$walk, $all, &$result, &$visited): void {
+            foreach ($all->where('parent_id', $parentId)->sortBy('sort_order') as $cat) {
+                if (isset($visited[$cat->id])) continue;
+                $visited[$cat->id] = true;
+                $result->push($cat);
+                $walk($cat->id);
+            }
+        };
+
+        $walk(null);
+        return $result;
+    }
+
+    /**
+     * Categories filtered by the modal search term, preserving tree order.
+     */
+    public function getModalCategories(): BaseCollection
+    {
+        $term = strtolower(trim($this->categoryModalSearch));
+        $all  = $this->getCategories();
+
+        if ($term === '') return $all;
+
+        return $all->filter(fn ($cat) => str_contains(strtolower($cat->name), $term))->values();
+    }
+
+    public function selectCategory(int $id, string $slug): void
+    {
+        $this->orderType          = $slug;
+        $this->categoryFilter     = $id > 0 ? $id : null;
+        $this->showCategoryModal  = false;
+    }
+
+    public function openCategoryModal(): void
+    {
+        $this->categoryModalSearch = '';
+        $this->showCategoryModal   = true;
+    }
+
+    public function closeCategoryModal(): void
+    {
+        $this->showCategoryModal = false;
+    }
+
+    private function categoryPathKey(): string
+    {
+        if (! $this->categoryFilter) return 'none';
+        return \App\Models\OrderType::with('parent.parent.parent')
+            ->find($this->categoryFilter)?->effective_default_path_key ?? 'none';
     }
 
     public function getServices(): Collection
@@ -196,6 +337,19 @@ class Pos extends Page
             $description .= ' â€” ' . ucfirst($variant->variant_type) . ': ' . $variant->variant_value;
         }
 
+        $product->loadMissing('materials.material');
+        $bom = $product->materials->map(function ($m) {
+            $unitPrice = (float) ($m->material?->price ?? 0);
+            return [
+                'id'         => $m->id,
+                'name'       => $m->material?->name ?? '—',
+                'quantity'   => (float) $m->quantity,
+                'unit'       => $m->material?->unit ?? '',
+                'unit_price' => $unitPrice,
+                'line_total' => round($unitPrice * (float) $m->quantity, 2),
+            ];
+        })->values()->all();
+
         return [
             'description'          => $description,
             'qty'                  => 1,
@@ -204,16 +358,106 @@ class Pos extends Page
             'product_id'           => $product->id,
             'variant_id'           => $variant?->id,
             'production_type'      => $product->production_type,
-            'production_path_key'  => 'none',
+            'production_path_key'  => \App\Models\OrderItem::detectPath($product, $this->categoryPathKey()),
             'customer_id'          => null,
             'measurements'         => [],
+            'bom'                  => $bom,
+            'bom_removals'         => [],
             'washing_required'     => true,
             'washing_skipped'      => false,
             'washing_skip_reason'  => '',
         ];
     }
 
-    // â”€â”€ Production Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    public function openRemoveBomModal(int $itemIndex, int $bomIndex): void
+    {
+        $this->removeBomItemIndex = $itemIndex;
+        $this->removeBomBomIndex  = $bomIndex;
+        $this->removeBomReason    = '';
+        $this->showRemoveBomModal = true;
+    }
+
+    public function confirmRemoveBomLine(): void
+    {
+        $this->validate(
+            ['removeBomReason' => 'required|min:3'],
+            ['removeBomReason.required' => 'A reason is required.', 'removeBomReason.min' => 'Reason must be at least 3 characters.']
+        );
+
+        $items = $this->items;
+        $i  = $this->removeBomItemIndex;
+        $bi = $this->removeBomBomIndex;
+
+        if (isset($items[$i]['bom'][$bi])) {
+            $line = $items[$i]['bom'][$bi];
+            $items[$i]['bom_removals'][] = [
+                'name'       => $line['name'],
+                'quantity'   => $line['quantity'],
+                'unit'       => $line['unit'],
+                'reason'     => trim($this->removeBomReason),
+                'removed_by' => auth()->user()?->name ?? 'Staff',
+                'removed_at' => now()->format('g:i A'),
+            ];
+            array_splice($items[$i]['bom'], $bi, 1);
+            $items[$i]['bom'] = array_values($items[$i]['bom']);
+            $this->items = $items;
+        }
+
+        $this->showRemoveBomModal = false;
+        $this->removeBomReason    = '';
+        $this->removeBomItemIndex = -1;
+        $this->removeBomBomIndex  = -1;
+    }
+
+    public function cancelRemoveBom(): void
+    {
+        $this->showRemoveBomModal = false;
+        $this->removeBomReason    = '';
+    }
+
+    // â"€â"€ Modal BOM line removal (production modal step 4) â"€â"€â"€â"€â"€â"€â"€â"€â"€
+    public function openModalBomRemove(int $bomIndex): void
+    {
+        $this->modalBomRemoveIndex  = $bomIndex;
+        $this->modalBomRemoveReason = '';
+        $this->showModalBomRemove   = true;
+    }
+
+    public function confirmModalBomRemove(): void
+    {
+        $this->validate(
+            ['modalBomRemoveReason' => 'required|min:3'],
+            ['modalBomRemoveReason.required' => 'A reason is required.', 'modalBomRemoveReason.min' => 'Reason must be at least 3 characters.']
+        );
+
+        $bi = $this->modalBomRemoveIndex;
+        if (isset($this->modalBom[$bi])) {
+            $line = $this->modalBom[$bi];
+            $this->modalBomRemovals[] = [
+                'name'       => $line['name'],
+                'quantity'   => $line['quantity'],
+                'unit'       => $line['unit'],
+                'reason'     => trim($this->modalBomRemoveReason),
+                'removed_by' => auth()->user()?->name ?? 'Staff',
+                'removed_at' => now()->format('g:i A'),
+            ];
+            array_splice($this->modalBom, $bi, 1);
+            $this->modalBom = array_values($this->modalBom);
+        }
+
+        $this->showModalBomRemove   = false;
+        $this->modalBomRemoveReason = '';
+        $this->modalBomRemoveIndex  = -1;
+    }
+
+    public function cancelModalBomRemove(): void
+    {
+        $this->showModalBomRemove   = false;
+        $this->modalBomRemoveReason = '';
+        $this->modalBomRemoveIndex  = -1;
+    }
+
+    // ── Production Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     public function openProductionModal(int $productId): void
     {
         $this->modalProductId       = $productId;
@@ -226,6 +470,10 @@ class Pos extends Page
         $this->modalCustomerEmail   = $this->customerEmail;
         $this->modalMeasurements    = [];
         $this->modalBom             = [];
+        $this->modalBomRemovals     = [];
+        $this->showModalBomRemove   = false;
+        $this->modalBomRemoveIndex  = -1;
+        $this->modalBomRemoveReason = '';
         $this->modalWashingRequired = true;
         $this->modalWashingSkipReason = '';
         $this->modalNotes           = '';
@@ -236,11 +484,14 @@ class Pos extends Page
         $product = Product::with(['materials.material', 'measurementTemplate', 'variants' => fn ($q) => $q->where('is_active', true)->orderBy('variant_type')])->find($productId);
         if ($product) {
             foreach ($product->materials as $m) {
+                $unitPrice = (float) ($m->material?->price ?? 0);
                 $this->modalBom[] = [
-                    'id'       => $m->id,
-                    'name'     => $m->material?->name ?? 'â€”',
-                    'quantity' => (float) $m->quantity,
-                    'unit'     => $m->material?->unit ?? '',
+                    'id'         => $m->id,
+                    'name'       => $m->material?->name ?? '—',
+                    'quantity'   => (float) $m->quantity,
+                    'unit'       => $m->material?->unit ?? '',
+                    'unit_price' => $unitPrice,
+                    'line_total' => round($unitPrice * (float) $m->quantity, 2),
                 ];
             }
         }
@@ -342,12 +593,23 @@ class Pos extends Page
     {
         if (! $this->modalCustomerId || ! $this->modalProductId) return;
 
+        // 1. Try product-specific saved measurements first
         $saved = \App\Models\CustomerMeasurement::where('customer_id', $this->modalCustomerId)
             ->where('product_id', $this->modalProductId)
             ->first();
 
         if ($saved && ! empty($saved->measurements)) {
             $this->modalMeasurements = $saved->measurements;
+            return;
+        }
+
+        // 2. Fall back to the customer's active body measurement profile
+        $profile = \App\Models\CustomerBodyMeasurement::where('customer_id', $this->modalCustomerId)
+            ->where('is_active', true)
+            ->first();
+
+        if ($profile && ! empty($profile->measurements)) {
+            $this->modalMeasurements = $profile->measurements;
         }
     }
 
@@ -461,13 +723,14 @@ class Pos extends Page
             'product_id'           => $product->id,
             'variant_id'           => $this->modalVariantId,
             'production_type'      => 'production',
-            'production_path_key'  => 'sewing_only',
+            'production_path_key'  => \App\Models\OrderItem::detectPath($product, $this->categoryPathKey()),
             'customer_id'          => $this->modalCustomerId,
             '_customer_name'       => $this->modalCustomerName,
             '_customer_phone'      => $this->modalCustomerPhone,
             '_customer_email'      => $this->modalCustomerEmail,
             'measurements'         => $this->modalMeasurements,
             'bom'                  => $this->modalBom,
+            'bom_removals'         => $this->modalBomRemovals,
             'washing_required'     => $this->modalWashingRequired,
             'washing_skipped'      => ! $this->modalWashingRequired,
             'washing_skip_reason'  => $this->modalWashingSkipReason,
@@ -603,6 +866,12 @@ class Pos extends Page
         );
         $this->customerId = $customer->id;
 
+        // Pre-fill first split with the full order total so cashier only
+        // needs to change it if the customer is paying differently
+        if (empty(array_filter(array_column($this->splits, 'amount')))) {
+            $this->splits[0]['amount'] = (string) $this->getTotal();
+        }
+
         $this->posStep = 'payment';
     }
 
@@ -696,7 +965,6 @@ class Pos extends Page
         return [
             'customerName'        => ['required', 'string', 'min:2'],
             'customerPhone'       => ['required', 'string', 'min:7'],
-            'orderType'           => ['required', 'string'],
             'items'               => ['required', 'array', 'min:1'],
             'items.*.description' => ['required', 'string'],
             'items.*.qty'         => ['required', 'numeric', 'min:1'],
@@ -842,6 +1110,7 @@ class Pos extends Page
             // Notification failure must not block sale completion
         }
 
+        $this->clearCartSession();
         $this->completedOrderId = $order->id;
         $this->showReceipt = true;
 
@@ -853,6 +1122,7 @@ class Pos extends Page
 
     public function newSale(): void
     {
+        $this->clearCartSession();
         $this->reset([
             'customerName', 'customerPhone', 'customerEmail', 'customerAddress',
             'notes', 'items', 'completedOrderId', 'showReceipt',

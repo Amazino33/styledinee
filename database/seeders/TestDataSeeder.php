@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\Material;
 use App\Models\MeasurementField;
 use App\Models\MeasurementTemplate;
 use App\Models\Product;
@@ -65,41 +64,46 @@ class TestDataSeeder extends Seeder
     private function seedMaterials(): void
     {
         $materials = [
-            ['name' => 'Plain White Cotton',     'unit' => 'yards', 'stock_quantity' => 50,  'low_stock_threshold' => 10],
-            ['name' => 'Ankara Print Fabric',    'unit' => 'yards', 'stock_quantity' => 80,  'low_stock_threshold' => 15],
-            ['name' => 'Aso-Oke (Blue)',          'unit' => 'yards', 'stock_quantity' => 30,  'low_stock_threshold' => 5],
-            ['name' => 'Aso-Oke (Gold)',          'unit' => 'yards', 'stock_quantity' => 25,  'low_stock_threshold' => 5],
-            ['name' => 'Lace Fabric (White)',     'unit' => 'yards', 'stock_quantity' => 20,  'low_stock_threshold' => 5],
-            ['name' => 'Lace Fabric (Cream)',     'unit' => 'yards', 'stock_quantity' => 20,  'low_stock_threshold' => 5],
-            ['name' => 'Chiffon (Black)',         'unit' => 'yards', 'stock_quantity' => 40,  'low_stock_threshold' => 8],
-            ['name' => 'Senator Material',       'unit' => 'yards', 'stock_quantity' => 35,  'low_stock_threshold' => 8],
-            ['name' => 'Guinea Brocade',         'unit' => 'yards', 'stock_quantity' => 25,  'low_stock_threshold' => 5],
-            ['name' => 'Thread (White)',         'unit' => 'spools', 'stock_quantity' => 100, 'low_stock_threshold' => 20],
-            ['name' => 'Thread (Black)',         'unit' => 'spools', 'stock_quantity' => 100, 'low_stock_threshold' => 20],
-            ['name' => 'Thread (Assorted)',      'unit' => 'spools', 'stock_quantity' => 60,  'low_stock_threshold' => 15],
-            ['name' => 'Buttons (White)',        'unit' => 'packs',  'stock_quantity' => 50,  'low_stock_threshold' => 10],
-            ['name' => 'Buttons (Gold)',         'unit' => 'packs',  'stock_quantity' => 30,  'low_stock_threshold' => 8],
-            ['name' => 'Zipper (Invisible)',     'unit' => 'pieces', 'stock_quantity' => 80,  'low_stock_threshold' => 15],
-            ['name' => 'Zipper (Regular)',       'unit' => 'pieces', 'stock_quantity' => 80,  'low_stock_threshold' => 15],
-            ['name' => 'Lining Fabric',          'unit' => 'yards',  'stock_quantity' => 30,  'low_stock_threshold' => 8],
-            ['name' => 'Shoulder Pad',           'unit' => 'pairs',  'stock_quantity' => 40,  'low_stock_threshold' => 10],
-            ['name' => 'Interfacing',            'unit' => 'yards',  'stock_quantity' => 20,  'low_stock_threshold' => 5],
-            ['name' => 'Embroidery Thread',      'unit' => 'spools', 'stock_quantity' => 80,  'low_stock_threshold' => 20],
+            ['name' => 'Plain White Cotton',  'unit' => 'yards',  'stock_quantity' => 50],
+            ['name' => 'Ankara Print Fabric', 'unit' => 'yards',  'stock_quantity' => 80],
+            ['name' => 'Aso-Oke (Blue)',      'unit' => 'yards',  'stock_quantity' => 30],
+            ['name' => 'Aso-Oke (Gold)',      'unit' => 'yards',  'stock_quantity' => 25],
+            ['name' => 'Lace Fabric (White)', 'unit' => 'yards',  'stock_quantity' => 20],
+            ['name' => 'Lace Fabric (Cream)', 'unit' => 'yards',  'stock_quantity' => 20],
+            ['name' => 'Chiffon (Black)',     'unit' => 'yards',  'stock_quantity' => 40],
+            ['name' => 'Senator Material',   'unit' => 'yards',  'stock_quantity' => 35],
+            ['name' => 'Guinea Brocade',     'unit' => 'yards',  'stock_quantity' => 25],
+            ['name' => 'Thread (White)',     'unit' => 'spools', 'stock_quantity' => 100],
+            ['name' => 'Thread (Black)',     'unit' => 'spools', 'stock_quantity' => 100],
+            ['name' => 'Thread (Assorted)', 'unit' => 'spools', 'stock_quantity' => 60],
+            ['name' => 'Buttons (White)',   'unit' => 'packs',  'stock_quantity' => 50],
+            ['name' => 'Buttons (Gold)',    'unit' => 'packs',  'stock_quantity' => 30],
+            ['name' => 'Zipper (Invisible)','unit' => 'pieces', 'stock_quantity' => 80],
+            ['name' => 'Zipper (Regular)', 'unit' => 'pieces', 'stock_quantity' => 80],
+            ['name' => 'Lining Fabric',    'unit' => 'yards',  'stock_quantity' => 30],
+            ['name' => 'Shoulder Pad',     'unit' => 'pairs',  'stock_quantity' => 40],
+            ['name' => 'Interfacing',      'unit' => 'yards',  'stock_quantity' => 20],
+            ['name' => 'Embroidery Thread','unit' => 'spools', 'stock_quantity' => 80],
         ];
 
         foreach ($materials as $m) {
-            Material::firstOrCreate(
-                ['name' => $m['name']],
+            Product::firstOrCreate(
+                ['name' => $m['name'], 'is_material' => true],
                 [
-                    'unit'                => $m['unit'],
-                    'stock_quantity'      => $m['stock_quantity'],
-                    'low_stock_threshold' => $m['low_stock_threshold'],
-                    'is_active'           => true,
+                    'slug'            => 'mat-' . \Illuminate\Support\Str::slug($m['name']),
+                    'unit'            => $m['unit'],
+                    'stock_quantity'  => $m['stock_quantity'],
+                    'price'           => 0,
+                    'is_active'       => true,
+                    'is_material'     => true,
+                    'is_published'    => false,
+                    'production_type' => 'ready_made',
+                    'product_type'    => 'accessory',
                 ]
             );
         }
 
-        $this->command->info('  ✓ Materials');
+        $this->command->info('  ✓ Materials (as products)');
     }
 
     // ── Services ───────────────────────────────────────────────────────────────
@@ -326,7 +330,7 @@ class TestDataSeeder extends Seeder
             ],
         ];
 
-        $materials = Material::pluck('id', 'name');
+        $materials = Product::where('is_material', true)->pluck('id', 'name');
 
         foreach ($bespokeProducts as $data) {
             $measurementNames = $data['measurements'];

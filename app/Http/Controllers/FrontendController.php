@@ -23,7 +23,7 @@ class FrontendController extends Controller
 
     public function shop()
     {
-        $products = Product::where('is_active', true)->orderBy('sort_order')->get();
+        $products = Product::where('is_active', true)->where('is_published', true)->orderBy('sort_order')->get();
         return view('pages.shop', compact('products'));
     }
 

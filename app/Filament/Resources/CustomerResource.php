@@ -57,6 +57,7 @@ class CustomerResource extends Resource
     public static function getRelations(): array
     {
         return [
+            \App\Filament\Resources\CustomerResource\RelationManagers\BodyMeasurementsRelationManager::class,
             \App\Filament\Resources\CustomerResource\RelationManagers\MeasurementsRelationManager::class,
         ];
     }
