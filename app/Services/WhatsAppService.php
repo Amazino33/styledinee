@@ -59,14 +59,12 @@ class WhatsAppService
         $number = preg_replace('/\D/', '', $phone);
 
         try {
-            $response = Http::withToken($token)          // Bearer header
-                ->post('https://app.wawp.net/api/send', [
-                    'number'       => $number,
-                    'type'         => 'text',
-                    'message'      => $message,
-                    'instance_id'  => $instanceId,
-                    'access_token' => $token,             // also in body for providers that need it
-                ]);
+            $response = Http::get('https://api.wawp.net/v2/send/text', [
+                'instance_id'  => $instanceId,
+                'access_token' => $token,
+                'chatId'       => $number . '@c.us',
+                'message'      => $message,
+            ]);
 
             if (! $response->successful()) {
                 Log::error("[WAWP] Failed to send to {$phone}: " . $response->body());
