@@ -651,13 +651,10 @@
             @foreach ($products as $product)
             <div class="prod-card" wire:click="selectProduct({{ $product->id }})" wire:key="prod-{{ $product->id }}">
                 @php
-                    $icon = match(true) {
-                        $product->production_type === 'production'  => ['🪡', 'Bespoke'],
-                        $product->category === 'accessory'          => ['👜', 'Accessory'],
-                        $product->category === 'fabric'             => ['🧵', 'Fabric'],
-                        $product->category === 'ready_made'         => ['👗', 'Ready-made'],
-                        default                                     => ['🛍', 'Product'],
-                    };
+                    $catName = $product->orderType?->name ?? 'Product';
+                    $catIcon = $product->orderType?->icon
+                        ?? ($product->production_type === 'production' ? '🪡' : '🛍');
+                    $icon = [$catIcon, $catName];
                 @endphp
                 <div class="prod-img-wrap {{ $product->image ? 'is-loading' : '' }}">
                     {{-- Placeholder always underneath --}}
@@ -680,7 +677,7 @@
                 </div>
                 <div class="prod-info">
                     <div class="prod-badge {{ $product->production_type==='production'?'production':'ready' }}">
-                        {{ $product->production_type==='production'?'Bespoke':'Ready' }}
+                        {{ $catName }}
                     </div>
                     <div class="prod-name">{{ $product->name }}</div>
                     <div class="prod-price">₦{{ number_format($product->price,0) }}</div>

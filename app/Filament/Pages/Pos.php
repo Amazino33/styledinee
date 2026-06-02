@@ -202,7 +202,8 @@ class Pos extends Page
         $search         = $this->search;
         $categoryFilter = $this->categoryFilter;
 
-        return Product::where('is_active', true)
+        return Product::with('orderType')
+            ->where('is_active', true)
             ->when($categoryFilter && ! $search, function ($q) use ($categoryFilter) {
                 $cat = \App\Models\OrderType::with('children.children.children.children')
                     ->find($categoryFilter);

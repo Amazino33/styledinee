@@ -67,8 +67,8 @@ class WhatsAppSettings extends Page
             'otp_max_attempts'  => ['required', 'integer', 'min:1', 'max:10'],
         ]);
 
-        AppSetting::set('wawp_instance_id',  $this->instance_id);
-        AppSetting::set('wawp_access_token', $this->access_token);
+        AppSetting::set('wawp_instance_id',  trim($this->instance_id));
+        AppSetting::set('wawp_access_token', trim($this->access_token));
         AppSetting::set('wawp_enabled',      $this->enabled ? '1' : '0');
 
         AppSetting::set('sms_enabled',    $this->sms_enabled ? '1' : '0');

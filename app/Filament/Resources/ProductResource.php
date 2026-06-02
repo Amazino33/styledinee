@@ -132,6 +132,7 @@ class ProductResource extends Resource
                     Hidden::make('order_type_id'),
                     Hidden::make('production_type')->default('ready_made'),
                     Hidden::make('product_type')->default(''),
+                    Hidden::make('needs_measurements')->default('0'),
 
                     TextInput::make('estimated_production_hours')
                         ->label('Est. Production Hours')
@@ -278,7 +279,7 @@ class ProductResource extends Resource
                         ->searchable(),
                 ])
                 ->columnSpanFull()
-                ->visible(fn (Get $get) => $get('production_type') === 'production'),
+                ->visible(fn (Get $get) => $get('needs_measurements') === '1'),
 
             Hidden::make('_bom_warning_acknowledged')->default(false),
 
@@ -314,12 +315,14 @@ class ProductResource extends Resource
         if (! $categoryId) {
             $set('production_type', 'ready_made');
             $set('product_type', '');
+            $set('needs_measurements', '0');
             return;
         }
         $cat = OrderType::with('parent.parent.parent')->find($categoryId);
         if (! $cat) return;
-        $set('production_type', $cat->effective_needs_production ? 'production' : 'ready_made');
-        $set('product_type', $cat->slug);
+        $set('production_type',   $cat->effective_needs_production   ? 'production' : 'ready_made');
+        $set('product_type',      $cat->slug);
+        $set('needs_measurements', $cat->effective_needs_measurements ? '1' : '0');
     }
 
     public static function table(Table $table): Table

@@ -39,6 +39,8 @@ class EditProduct extends EditRecord
             $data['_cat_l2'] = isset($chain[1]) ? $chain[1]->id : null;
             $data['_cat_l3'] = isset($chain[2]) ? $chain[2]->id : null;
             $data['_cat_l4'] = isset($chain[3]) ? $chain[3]->id : null;
+
+            $data['needs_measurements'] = $cat?->effective_needs_measurements ? '1' : '0';
         }
 
         return $data;
