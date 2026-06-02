@@ -22,7 +22,7 @@ use Filament\Tables\Table;
 class BodyMeasurementsRelationManager extends RelationManager
 {
     protected static string $relationship = 'bodyMeasurements';
-    protected static ?string $title = 'Body Measurements';
+    protected static ?string $title = 'Default Measurements';
     protected static bool $shouldSkipAuthorization = true;
 
     public function form(Schema $schema): Schema
