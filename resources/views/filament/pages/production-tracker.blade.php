@@ -309,7 +309,7 @@
 @if($showDetailsModal)
 @php
     $detailsItem = \App\Models\OrderItem::with([
-        'order.customer.measurements.clothingType',
+        'order.customer.measurements.product',
         'variant',
     ])->find($detailsItemId);
     $detailsOrder    = $detailsItem?->order;
@@ -377,7 +377,7 @@
         @foreach($detailsCustomer->measurements as $meas)
         <div style="margin-top:.6rem;">
             <div style="font-size:.72rem;font-weight:700;color:var(--text3);margin-bottom:.3rem;">
-                {{ $meas->clothingType?->name ?? 'Unknown Type' }}
+                {{ $meas->product?->name ?? 'General Measurements' }}
                 <span style="font-weight:400;color:var(--muted);">({{ $meas->unit }})</span>
             </div>
             <div class="details-meas">
