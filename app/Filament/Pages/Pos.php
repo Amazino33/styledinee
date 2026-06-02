@@ -593,23 +593,47 @@ class Pos extends Page
     {
         if (! $this->modalCustomerId || ! $this->modalProductId) return;
 
-        // 1. Try product-specific saved measurements first
-        $saved = \App\Models\CustomerMeasurement::where('customer_id', $this->modalCustomerId)
-            ->where('product_id', $this->modalProductId)
-            ->first();
+        $composite = [];
 
-        if ($saved && ! empty($saved->measurements)) {
-            $this->modalMeasurements = $saved->measurements;
-            return;
-        }
+        // 1. Lowest priority: any field value seen across ALL previous product measurements.
+        //    This ensures even a customer with no body profile still gets their known sizes.
+        \App\Models\CustomerMeasurement::where('customer_id', $this->modalCustomerId)
+            ->whereNotNull('measurements')
+            ->get()
+            ->each(function ($m) use (&$composite) {
+                foreach ((array) ($m->measurements ?? []) as $fieldId => $value) {
+                    if ($value !== null && $value !== '') {
+                        $composite[$fieldId] = $value;
+                    }
+                }
+            });
 
-        // 2. Fall back to the customer's active body measurement profile
+        // 2. Active body measurement profile overrides the composite (more authoritative).
         $profile = \App\Models\CustomerBodyMeasurement::where('customer_id', $this->modalCustomerId)
             ->where('is_active', true)
             ->first();
+        if ($profile) {
+            foreach ((array) ($profile->measurements ?? []) as $fieldId => $value) {
+                if ($value !== null && $value !== '') {
+                    $composite[$fieldId] = $value;
+                }
+            }
+        }
 
-        if ($profile && ! empty($profile->measurements)) {
-            $this->modalMeasurements = $profile->measurements;
+        // 3. Highest priority: measurements saved specifically for this product.
+        $saved = \App\Models\CustomerMeasurement::where('customer_id', $this->modalCustomerId)
+            ->where('product_id', $this->modalProductId)
+            ->first();
+        if ($saved) {
+            foreach ((array) ($saved->measurements ?? []) as $fieldId => $value) {
+                if ($value !== null && $value !== '') {
+                    $composite[$fieldId] = $value;
+                }
+            }
+        }
+
+        if (! empty($composite)) {
+            $this->modalMeasurements = $composite;
         }
     }
 
@@ -624,23 +648,54 @@ class Pos extends Page
             ->filter(fn ($m) => ! empty($m->measurements));
     }
 
+    public function getCustomerBodyMeasurement(): ?\App\Models\CustomerBodyMeasurement
+    {
+        if (! $this->modalCustomerId) return null;
+
+        return \App\Models\CustomerBodyMeasurement::where('customer_id', $this->modalCustomerId)
+            ->where('is_active', true)
+            ->latest()
+            ->first();
+    }
+
     public function loadFromSavedMeasurement(int $measurementId): void
     {
         $saved = \App\Models\CustomerMeasurement::find($measurementId);
         if (! $saved || $saved->customer_id !== $this->modalCustomerId) return;
 
+        $this->applyMeasurementSet((array) ($saved->measurements ?? []));
+        Notification::make()->title('Measurements loaded.')->success()->send();
+    }
+
+    public function loadFromBodyMeasurement(): void
+    {
+        $profile = \App\Models\CustomerBodyMeasurement::where('customer_id', $this->modalCustomerId)
+            ->where('is_active', true)
+            ->latest()
+            ->first();
+
+        if (! $profile || empty($profile->measurements)) {
+            Notification::make()->title('No default profile found.')->warning()->send();
+            return;
+        }
+
+        $this->applyMeasurementSet((array) ($profile->measurements ?? []));
+        Notification::make()->title('Default measurements loaded.')->success()->send();
+    }
+
+    /** Merges a measurement array into the current modal fields (only fills template fields). */
+    private function applyMeasurementSet(array $source): void
+    {
         $product  = $this->getModalProduct();
         $fieldIds = $product?->measurementTemplate?->fields ?? [];
 
         $measurements = $this->modalMeasurements;
         foreach ($fieldIds as $fieldId) {
-            if (isset($saved->measurements[$fieldId])) {
-                $measurements[$fieldId] = $saved->measurements[$fieldId];
+            if (isset($source[$fieldId]) && $source[$fieldId] !== '') {
+                $measurements[$fieldId] = $source[$fieldId];
             }
         }
         $this->modalMeasurements = $measurements;
-
-        Notification::make()->title('Measurements loaded.')->success()->send();
     }
 
     // Steps: 1 = customer/variant, 2 = measurements, 3 = design, 4 = confirm

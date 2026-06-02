@@ -8,14 +8,15 @@ use BackedEnum;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
-use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
+use Illuminate\Support\Str;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Support\HtmlString;
@@ -37,13 +38,29 @@ class OrderTypeResource extends Resource
 
             // ── Identity ────────────────────────────────────────────────
             Section::make('Identity')->schema([
-                TextInput::make('name')->required()->maxLength(100),
+                TextInput::make('name')
+                    ->required()
+                    ->maxLength(100)
+                    ->live(onBlur: true)
+                    ->afterStateUpdated(function ($state, Set $set, ?OrderType $record) {
+                        $base = Str::slug($state);
+                        $slug = $base;
+                        $i    = 2;
+                        while (
+                            OrderType::where('slug', $slug)
+                                ->when($record?->id, fn ($q) => $q->where('id', '!=', $record->id))
+                                ->exists()
+                        ) {
+                            $slug = $base . '-' . $i++;
+                        }
+                        $set('slug', $slug);
+                    }),
 
                 TextInput::make('slug')
                     ->required()
                     ->maxLength(50)
                     ->unique(ignoreRecord: true)
-                    ->helperText('Lowercase, underscores only. e.g. ready_made'),
+                    ->helperText('Auto-generated from name. Lowercase, underscores only.'),
 
                 TextInput::make('icon')
                     ->maxLength(10)

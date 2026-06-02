@@ -1228,14 +1228,18 @@
                 $savedSets   = $this->getCustomerSavedMeasurements();
             @endphp
 
-            @if($savedSets->isNotEmpty())
+            @php
+                $bodyMeasure = $this->getCustomerBodyMeasurement();
+                $hasAnyMeasurements = $savedSets->isNotEmpty() || $bodyMeasure;
+            @endphp
+            @if($hasAnyMeasurements)
             <div x-data="{ open: false, search: '' }" style="position:relative;margin-bottom:1rem;">
                 <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:.35rem;">
                     Load from saved measurements
                 </div>
                 {{-- Trigger --}}
                 <div @click="open=!open" style="display:flex;align-items:center;justify-content:space-between;padding:.45rem .7rem;border:1px solid var(--border);border-radius:7px;background:var(--bg2);cursor:pointer;user-select:none;">
-                    <span style="font-size:.82rem;color:var(--text3);">Select a previous measurement set…</span>
+                    <span style="font-size:.82rem;color:var(--text3);">Select a measurement set…</span>
                     <span :style="open ? 'transform:rotate(180deg);display:inline-block' : 'display:inline-block'" style="font-size:.75rem;color:var(--text3);line-height:1;transition:transform .15s;flex-shrink:0;">&#x25BE;</span>
                 </div>
                 {{-- Dropdown --}}
@@ -1243,11 +1247,27 @@
                     style="position:absolute;z-index:50;left:0;right:0;top:calc(100% + 4px);background:var(--bg);border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.15);overflow:hidden;">
                     {{-- Search --}}
                     <div style="padding:.5rem .6rem;border-bottom:1px solid var(--border);">
-                        <input x-model="search" type="text" placeholder="Search by product name…" autofocus
+                        <input x-model="search" type="text" placeholder="Search…" autofocus
                             style="width:100%;padding:.38rem .55rem;border:1px solid var(--border);border-radius:6px;background:var(--bg2);font-size:.82rem;color:var(--text);font-family:inherit;outline:none;">
                     </div>
-                    {{-- Options --}}
-                    <div style="max-height:200px;overflow-y:auto;">
+                    <div style="max-height:220px;overflow-y:auto;">
+                        {{-- Default body measurement profile (pinned at top) --}}
+                        @if($bodyMeasure)
+                        <div
+                            x-show="search==='' || 'default measurements'.includes(search.toLowerCase())"
+                            wire:click="loadFromBodyMeasurement"
+                            @click="open=false; search=''"
+                            style="display:flex;align-items:center;justify-content:space-between;padding:.55rem .75rem;cursor:pointer;font-size:.83rem;color:var(--text);gap:.5rem;border-bottom:1px solid var(--border);"
+                            onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background=''">
+                            <span style="display:flex;align-items:center;gap:.35rem;font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                                <span>⭐</span> Default Measurements
+                            </span>
+                            <span style="font-size:.72rem;color:var(--muted);white-space:nowrap;flex-shrink:0;">
+                                {{ count($bodyMeasure->measurements ?? []) }} fields · {{ $bodyMeasure->updated_at->format('d M Y') }}
+                            </span>
+                        </div>
+                        @endif
+                        {{-- Product-specific saved sets --}}
                         @foreach($savedSets as $ss)
                         @php $productName = $ss->product?->name ?? 'Product #'.$ss->product_id; @endphp
                         <div
