@@ -4,12 +4,14 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\OrderResource\Pages;
 use App\Models\Order;
+use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Repeater;
 use Filament\Schemas\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
+use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Resources\Resource;
@@ -103,6 +105,19 @@ class OrderResource extends Resource
                     TextInput::make('amount_paid')->numeric()->prefix('â‚¦')
                         ->disabled(! $user?->hasAnyRole(['admin', 'cashier'])),
 
+                    Select::make('delivery_type')
+                        ->label('Delivery Type')
+                        ->options(['pickup' => 'Pickup', 'delivery' => 'Home Delivery'])
+                        ->disabled($isStaff)
+                        ->live(),
+
+                    Textarea::make('customer_address')
+                        ->label('Delivery Address')
+                        ->rows(2)
+                        ->disabled($isStaff)
+                        ->visible(fn (Get $get) => $get('delivery_type') === 'delivery')
+                        ->columnSpanFull(),
+
                     DatePicker::make('pickup_date')->disabled($isStaff),
                     DatePicker::make('delivery_date'),
                 ])->columns(2),
@@ -166,6 +181,15 @@ class OrderResource extends Resource
                         'paid' => 'success',
                         default => 'gray',
                     }),
+                Tables\Columns\TextColumn::make('delivery_type')
+                    ->label('Delivery')
+                    ->badge()
+                    ->formatStateUsing(fn (?string $state) => match($state) {
+                        'delivery' => '🚚 Home Delivery',
+                        'pickup'   => '🏪 Pickup',
+                        default    => '—',
+                    })
+                    ->color(fn (?string $state) => $state === 'delivery' ? 'info' : 'gray'),
                 Tables\Columns\TextColumn::make('total_amount')->money('NGN')->sortable(),
                 Tables\Columns\TextColumn::make('created_at')->dateTime()->sortable(),
             ])
@@ -193,6 +217,52 @@ class OrderResource extends Resource
             ])
             ->recordActions([
                 \Filament\Actions\EditAction::make(),
+
+                Action::make('changeDelivery')
+                    ->label('Change Delivery')
+                    ->icon('heroicon-o-truck')
+                    ->color('gray')
+                    ->visible(fn (Order $record) =>
+                        ! in_array($record->status, ['delivered', 'cancelled'])
+                        && auth()->user()?->hasAnyRole(['admin', 'cashier'])
+                    )
+                    ->fillForm(fn (Order $record) => [
+                        'delivery_type'    => $record->delivery_type,
+                        'customer_address' => $record->customer_address,
+                        'delivery_notes'   => $record->delivery_notes,
+                    ])
+                    ->form([
+                        Select::make('delivery_type')
+                            ->label('Delivery Type')
+                            ->options(['pickup' => '🏪 Pickup', 'delivery' => '🚚 Home Delivery'])
+                            ->required()
+                            ->live(),
+
+                        Textarea::make('customer_address')
+                            ->label('Delivery Address')
+                            ->rows(2)
+                            ->required(fn (Get $get) => $get('delivery_type') === 'delivery')
+                            ->visible(fn (Get $get) => $get('delivery_type') === 'delivery')
+                            ->helperText('Required for home delivery.'),
+
+                        Textarea::make('delivery_notes')
+                            ->label('Delivery Notes')
+                            ->rows(2)
+                            ->placeholder('e.g. Call on arrival, gate code…')
+                            ->visible(fn (Get $get) => $get('delivery_type') === 'delivery'),
+                    ])
+                    ->action(function (Order $record, array $data) {
+                        $record->update([
+                            'delivery_type'    => $data['delivery_type'],
+                            'customer_address' => $data['customer_address'] ?? $record->customer_address,
+                            'delivery_notes'   => $data['delivery_notes'] ?? null,
+                        ]);
+
+                        Notification::make()
+                            ->title('Delivery type updated to ' . ($data['delivery_type'] === 'delivery' ? 'Home Delivery' : 'Pickup'))
+                            ->success()
+                            ->send();
+                    }),
             ])
             ->defaultSort('created_at', 'desc');
     }
