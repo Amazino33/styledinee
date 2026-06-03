@@ -26,7 +26,10 @@ class NotificationService
 
     public function stageUpdated(Order $order, string $stage, string $clientMessage): void
     {
-        $message = "Hi {$order->customer_name}, update on {$order->reference}: {$clientMessage}";
+        $trackUrl = route('order.track', $order->reference);
+        $message  = "Hi {$order->customer_name}, update on order *{$order->reference}*:\n\n"
+            . "{$clientMessage}\n\n"
+            . "Track your order: {$trackUrl}";
 
         $this->whatsapp->send($order->customer_phone, $message);
         $this->sendEmail($order->customer_email, "Order Update – {$order->reference}", $message);

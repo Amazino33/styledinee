@@ -157,6 +157,15 @@ class OrderItem extends Model
         return $this->production_path[$current + 1] ?? null;
     }
 
+    // Customer-facing messages sent on each stage advancement.
+    const STAGE_CLIENT_MESSAGES = [
+        'sewing'     => 'Your item is now being tailored by our team. We\'ll keep you posted!',
+        'embroidery' => 'Your item has entered the embroidery stage.',
+        'printing'   => 'Your item is now in the printing stage.',
+        'finishing'  => 'Your item is in the final finishing stage — almost ready!',
+        'ready'      => 'Great news! Your order is ready for collection at Styledinee. Please come in at your convenience.',
+    ];
+
     public function advanceToNextStage(int $actorId): void
     {
         $next = $this->nextStage();
@@ -175,18 +184,36 @@ class OrderItem extends Model
             'staff_done_by'     => null,
         ]);
 
-        $order = $this->order;
+        $order         = $this->order;
+        $clientMessage = self::STAGE_CLIENT_MESSAGES[$next] ?? null;
+        $isPublished   = $clientMessage !== null;
+
         if ($order) {
             $order->syncStatusFromItems();
 
             OrderStatusLog::create([
-                'order_id'      => $order->id,
-                'order_item_id' => $this->id,
-                'changed_by'    => $actorId,
-                'status'        => $next,
-                'notes'         => 'Stage advanced to ' . (self::PRODUCTION_STAGES[$next] ?? ucfirst($next)) . '.',
-                'is_published'  => false,
+                'order_id'       => $order->id,
+                'order_item_id'  => $this->id,
+                'changed_by'     => $actorId,
+                'status'         => $next,
+                'notes'          => 'Stage advanced to ' . (self::PRODUCTION_STAGES[$next] ?? ucfirst($next)) . '.',
+                'is_published'   => $isPublished,
+                'client_message' => $clientMessage,
             ]);
+
+            // Notify the customer via WhatsApp for every published stage
+            if ($isPublished && $order->customer_phone) {
+                try {
+                    $notif = app(\App\Services\NotificationService::class);
+                    if ($next === 'ready') {
+                        $notif->notifyOrderReady($order);
+                    } else {
+                        $notif->stageUpdated($order, $next, $clientMessage);
+                    }
+                } catch (\Throwable) {
+                    // Notification failures must never block stage advancement
+                }
+            }
         }
     }
 }
