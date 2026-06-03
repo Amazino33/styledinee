@@ -165,6 +165,7 @@
                 <select wire:model="sms_provider" class="field-input" style="cursor:pointer;">
                     <option value="termii">Termii</option>
                     <option value="bulksms">BulkSMS Nigeria</option>
+                    <option value="kudisms">KudiSMS</option>
                 </select>
             </div>
             <div>

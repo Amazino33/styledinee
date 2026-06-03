@@ -66,24 +66,38 @@ class WhatsAppService
                 'message'      => $message,
             ]);
 
+            // HTTP-level failure
             if (! $response->successful()) {
-                Log::error("[WAWP] Failed to send to {$phone}: " . $response->body());
+                Log::warning("[WAWP] HTTP error sending to {$phone} — falling back to SMS: " . $response->body());
                 return false;
             }
 
+            // Payload-level failure: WAWP may return 200 with an error body
+            // (e.g. number not on WhatsApp, session disconnected, etc.)
+            $json = $response->json();
+            if (
+                isset($json['error']) ||
+                (isset($json['status']) && $json['status'] === false) ||
+                (isset($json['success']) && $json['success'] === false)
+            ) {
+                Log::warning("[WAWP] Delivery failed for {$phone} — falling back to SMS: " . $response->body());
+                return false;
+            }
+
+            Log::info("[WAWP] Sent to {$phone}");
             return true;
         } catch (\Throwable $e) {
-            Log::error("[WAWP] Exception sending to {$phone}: " . $e->getMessage());
+            Log::error("[WAWP] Exception sending to {$phone} — falling back to SMS: " . $e->getMessage());
             return false;
         }
     }
 
     private function sendSms(string $phone, string $message): bool
     {
-        $enabled    = AppSetting::bool('sms_enabled', false);
-        $provider   = AppSetting::get('sms_provider', '');   // 'termii' | 'bulksms'
-        $apiKey     = AppSetting::get('sms_api_key', '');
-        $senderId   = AppSetting::get('sms_sender_id', 'Styledinee');
+        $enabled  = AppSetting::bool('sms_enabled', false);
+        $provider = AppSetting::get('sms_provider', '');   // 'termii' | 'bulksms' | 'kudisms'
+        $apiKey   = AppSetting::get('sms_api_key', '');
+        $senderId = AppSetting::get('sms_sender_id', 'Styledinee');
 
         if (! $enabled || empty($apiKey) || empty($provider)) {
             Log::info("[SMS stub] Would send to {$phone}: {$message}");
@@ -102,18 +116,44 @@ class WhatsAppService
                     'channel' => 'generic',
                     'api_key' => $apiKey,
                 ]);
+
+                if (! $response->successful()) {
+                    Log::error("[SMS] Termii failed to send to {$phone}: " . $response->body());
+                    return false;
+                }
+
             } elseif ($provider === 'bulksms') {
                 $response = Http::withBasicAuth($apiKey, AppSetting::get('sms_api_secret', ''))
                     ->post('https://api.bulksms.com/v1/messages', [
                         ['to' => $number, 'body' => $message],
                     ]);
+
+                if (! $response->successful()) {
+                    Log::error("[SMS] BulkSMS failed to send to {$phone}: " . $response->body());
+                    return false;
+                }
+
+            } elseif ($provider === 'kudisms') {
+                $response = Http::withToken($apiKey)
+                    ->post('https://my.kudisms.net/api/autocomposesms', [
+                        'token'   => $apiKey,
+                        'gateway' => 2,
+                        'data'    => [[$senderId, $number, $message]],
+                    ]);
+
+                if (! $response->successful()) {
+                    Log::error("[SMS] KudiSMS failed to send to {$phone}: " . $response->body());
+                    return false;
+                }
+
+                $errorCode = $response->json('error_code');
+                if ($errorCode !== '000') {
+                    Log::error("[SMS] KudiSMS error {$errorCode} sending to {$phone}: " . $response->body());
+                    return false;
+                }
+
             } else {
                 Log::warning("[SMS] Unknown provider: {$provider}");
-                return false;
-            }
-
-            if (! $response->successful()) {
-                Log::error("[SMS] Failed to send to {$phone}: " . $response->body());
                 return false;
             }
 
