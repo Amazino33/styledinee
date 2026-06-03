@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Models\Order;
 use App\Models\OrderAssignment;
 use App\Models\User;
 use Filament\Pages\Page;
@@ -26,13 +27,13 @@ class StaffHistory extends Page
         ]);
     }
 
-    public string  $search    = '';
-    public string  $dept      = '';
-    public string  $dateFrom  = '';
-    public string  $dateTo    = '';
-    public string  $sortCol   = 'completed_at';
-    public string  $sortDir   = 'desc';
-    public ?int    $staffId   = null; // admin-only filter
+    public string $search   = '';
+    public string $dept     = '';
+    public string $dateFrom = '';
+    public string $dateTo   = '';
+    public string $sortCol  = 'completed_at';
+    public string $sortDir  = 'desc';
+    public ?int   $staffId  = null;
 
     protected $queryString = ['search', 'dept', 'dateFrom', 'dateTo', 'sortCol', 'sortDir', 'staffId'];
 
@@ -58,6 +59,11 @@ class StaffHistory extends Page
         return (bool) auth()->user()?->hasRole('admin');
     }
 
+    public function isDriver(): bool
+    {
+        return (bool) auth()->user()?->hasRole('delivery');
+    }
+
     public function getStaffList(): array
     {
         return User::role(['tailor', 'embroidery', 'printer', 'dry_cleaner', 'delivery'])
@@ -66,7 +72,17 @@ class StaffHistory extends Page
             ->toArray();
     }
 
+    // ── Stats ─────────────────────────────────────────────────────────────────
+
     public function getStats(): array
+    {
+        if ($this->isDriver()) {
+            return $this->getDeliveryStats();
+        }
+        return $this->getAssignmentStats();
+    }
+
+    private function getAssignmentStats(): array
     {
         $base = OrderAssignment::where('status', 'complete');
 
@@ -91,7 +107,35 @@ class StaffHistory extends Page
         ];
     }
 
+    private function getDeliveryStats(): array
+    {
+        $base = Order::where('status', 'delivered')->where('delivery_type', 'delivery')
+            ->where('delivery_user_id', auth()->id());
+
+        return [
+            'total'       => (clone $base)->count(),
+            'this_week'   => (clone $base)
+                ->whereBetween('updated_at', [now()->startOfWeek(), now()->endOfWeek()])
+                ->count(),
+            'this_month'  => (clone $base)
+                ->whereMonth('updated_at', now()->month)
+                ->whereYear('updated_at', now()->year)
+                ->count(),
+            'total_value' => (clone $base)->sum('total_amount'),
+        ];
+    }
+
+    // ── History ───────────────────────────────────────────────────────────────
+
     public function getHistory()
+    {
+        if ($this->isDriver()) {
+            return $this->getDeliveryHistory();
+        }
+        return $this->getAssignmentHistory();
+    }
+
+    private function getAssignmentHistory()
     {
         $allowed = ['completed_at', 'assigned_at', 'department', 'subtotal'];
         $col     = in_array($this->sortCol, $allowed, true) ? $this->sortCol : 'completed_at';
@@ -102,14 +146,12 @@ class StaffHistory extends Page
             ->leftJoin('order_items', 'order_items.id', '=', 'order_assignments.order_item_id')
             ->where('order_assignments.status', 'complete');
 
-        // Scope: staff see only their own; admins see all (or filtered by staffId)
         if (! $this->isAdmin()) {
             $query->where('order_assignments.assigned_to', auth()->id());
         } elseif ($this->staffId) {
             $query->where('order_assignments.assigned_to', $this->staffId);
         }
 
-        // Search
         if ($this->search) {
             $term = '%' . $this->search . '%';
             $query->where(function ($q) use ($term) {
@@ -133,11 +175,39 @@ class StaffHistory extends Page
             $query->whereDate('order_assignments.completed_at', '<=', $this->dateTo);
         }
 
-        // Sorting
-        if ($col === 'subtotal') {
-            $query->orderBy('order_items.subtotal', $dir);
-        } else {
-            $query->orderBy("order_assignments.{$col}", $dir);
+        $col === 'subtotal'
+            ? $query->orderBy('order_items.subtotal', $dir)
+            : $query->orderBy("order_assignments.{$col}", $dir);
+
+        return $query->paginate(20);
+    }
+
+    private function getDeliveryHistory()
+    {
+        $allowed = ['updated_at', 'total_amount', 'customer_name'];
+        $col     = in_array($this->sortCol, $allowed, true) ? $this->sortCol : 'updated_at';
+        $dir     = $this->sortDir === 'asc' ? 'asc' : 'desc';
+
+        $query = Order::where('status', 'delivered')
+            ->where('delivery_type', 'delivery')
+            ->where('delivery_user_id', auth()->id())
+            ->orderBy($col, $dir);
+
+        if ($this->search) {
+            $term = '%' . $this->search . '%';
+            $query->where(fn ($q) =>
+                $q->where('reference', 'like', $term)
+                  ->orWhere('customer_name', 'like', $term)
+                  ->orWhere('customer_phone', 'like', $term)
+            );
+        }
+
+        if ($this->dateFrom) {
+            $query->whereDate('updated_at', '>=', $this->dateFrom);
+        }
+
+        if ($this->dateTo) {
+            $query->whereDate('updated_at', '<=', $this->dateTo);
         }
 
         return $query->paginate(20);

@@ -92,9 +92,10 @@
 </style>
 
 @php
-    $isAdmin = $this->isAdmin();
-    $stats   = $this->getStats();
-    $history = $this->getHistory();
+    $isAdmin  = $this->isAdmin();
+    $isDriver = $this->isDriver();
+    $stats    = $this->getStats();
+    $history  = $this->getHistory();
 
     $stageColors = [
         'tailor'      => ['bg' => 'rgba(99,102,241,.12)',  'text' => '#6366f1', 'label' => 'Sewing'],
@@ -127,9 +128,9 @@
         <div class="sh-stat-sub">{{ now()->format('F Y') }}</div>
     </div>
     <div class="sh-stat">
-        <div class="sh-stat-label">Total value</div>
+        <div class="sh-stat-label">{{ $isDriver ? 'Total value' : 'Total value' }}</div>
         <div class="sh-stat-val" style="font-size:1.25rem;">₦{{ number_format($stats['total_value'], 0) }}</div>
-        <div class="sh-stat-sub">of completed work</div>
+        <div class="sh-stat-sub">{{ $isDriver ? 'of delivered orders' : 'of completed work' }}</div>
     </div>
 </div>
 
@@ -149,14 +150,15 @@
     </select>
     @endif
 
+    @if(! $isDriver)
     <select wire:model.live="dept" class="sh-select">
         <option value="">All stages</option>
         <option value="tailor">Sewing</option>
         <option value="embroidery">Embroidery</option>
         <option value="printer">Printing</option>
         <option value="dry_cleaner">Washing / Finishing</option>
-        <option value="delivery">Delivery</option>
     </select>
+    @endif
 
     <input wire:model.live="dateFrom" type="date" class="sh-input" title="From date">
     <span style="font-size:.8rem;color:var(--muted);">—</span>
@@ -176,14 +178,59 @@
             <div>No completed work found{{ $search || $dept || $dateFrom || $dateTo ? ' for these filters' : ' yet' }}.</div>
         </div>
     @else
+        @php
+            $icon = fn($col) => $sortCol === $col ? ($sortDir === 'asc' ? '↑' : '↓') : '↕';
+            $cls  = fn($col) => 'sh-sort-icon' . ($sortCol === $col ? ' active' : '');
+        @endphp
+
+        @if($isDriver)
+        {{-- ── Delivery table ── --}}
         <table class="sh-table">
             <thead>
-                @php
-                    $icon = fn($col) => $sortCol === $col
-                        ? ($sortDir === 'asc' ? '↑' : '↓')
-                        : '↕';
-                    $cls  = fn($col) => 'sh-sort-icon' . ($sortCol === $col ? ' active' : '');
-                @endphp
+                <tr>
+                    <th>Order</th>
+                    <th class="sortable" wire:click="sortBy('customer_name')">
+                        Customer <span class="{{ $cls('customer_name') }}">{{ $icon('customer_name') }}</span>
+                    </th>
+                    <th>Address</th>
+                    <th>Payment</th>
+                    <th class="sortable" style="text-align:right;" wire:click="sortBy('total_amount')">
+                        Amount <span class="{{ $cls('total_amount') }}">{{ $icon('total_amount') }}</span>
+                    </th>
+                    <th class="sortable" wire:click="sortBy('updated_at')">
+                        Delivered <span class="{{ $cls('updated_at') }}">{{ $icon('updated_at') }}</span>
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($history as $order)
+                    @php
+                        $psBg  = $order->payment_status === 'paid' ? 'rgba(34,197,94,.12)' : ($order->payment_status === 'partial' ? 'rgba(245,158,11,.12)' : 'rgba(239,68,68,.1)');
+                        $psTxt = $order->payment_status === 'paid' ? '#16a34a' : ($order->payment_status === 'partial' ? '#d97706' : '#dc2626');
+                    @endphp
+                    <tr>
+                        <td><span class="sh-ref">{{ $order->reference }}</span></td>
+                        <td>
+                            <div class="sh-name">{{ $order->customer_name }}</div>
+                            <div class="sh-cust">{{ $order->customer_phone }}</div>
+                        </td>
+                        <td><div class="sh-cust">{{ $order->customer_address ? \Illuminate\Support\Str::limit($order->customer_address, 40) : '—' }}</div></td>
+                        <td>
+                            <span style="font-size:.65rem;font-weight:700;text-transform:uppercase;padding:.18rem .55rem;border-radius:999px;background:{{ $psBg }};color:{{ $psTxt }};">
+                                {{ ucfirst($order->payment_status) }}
+                            </span>
+                        </td>
+                        <td style="text-align:right;"><span style="font-weight:700;color:var(--text);">₦{{ number_format($order->total_amount, 0) }}</span></td>
+                        <td><span class="sh-time" style="color:#16a34a;font-weight:600;">{{ $order->updated_at?->format('d M Y, H:i') }}</span></td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+
+        @else
+        {{-- ── Production / assignment table ── --}}
+        <table class="sh-table">
+            <thead>
                 <tr>
                     <th class="sortable" wire:click="sortBy('department')">
                         Stage <span class="{{ $cls('department') }}">{{ $icon('department') }}</span>
@@ -207,43 +254,34 @@
             <tbody>
                 @foreach($history as $row)
                     @php
-                        $dept  = $row->department ?? 'sewing';
-                        $color = $stageColors[$dept] ?? ['bg' => 'rgba(107,114,128,.1)', 'text' => '#6b7280', 'label' => ucfirst($dept)];
-                        $item  = $row->orderItem;
-                        $order = $row->order;
+                        $dept     = $row->department ?? 'sewing';
+                        $color    = $stageColors[$dept] ?? ['bg' => 'rgba(107,114,128,.1)', 'text' => '#6b7280', 'label' => ucfirst($dept)];
+                        $item     = $row->orderItem;
+                        $order    = $row->order;
                         $duration = ($row->assigned_at && $row->completed_at)
                             ? $row->assigned_at->diff($row->completed_at)->format('%hh %im')
                             : '—';
                     @endphp
                     <tr>
                         <td>
-                            <span class="sh-stage-pill"
-                                  style="background:{{ $color['bg'] }};color:{{ $color['text'] }};">
+                            <span class="sh-stage-pill" style="background:{{ $color['bg'] }};color:{{ $color['text'] }};">
                                 {{ $color['label'] }}
                             </span>
                         </td>
                         <td>
                             <div class="sh-name">{{ $item?->description ?? '—' }}</div>
-                            @if($item?->product)
-                                <div class="sh-cust">{{ $item->product->name }}</div>
-                            @endif
+                            @if($item?->product)<div class="sh-cust">{{ $item->product->name }}</div>@endif
                         </td>
                         <td><span class="sh-ref">{{ $order?->reference ?? '—' }}</span></td>
                         <td>
                             <div class="sh-name" style="font-weight:500;">{{ $order?->customer?->name ?? $order?->customer_name ?? '—' }}</div>
-                            @if($order?->customer?->phone)
-                                <div class="sh-cust">{{ $order->customer->phone }}</div>
-                            @endif
+                            @if($order?->customer?->phone)<div class="sh-cust">{{ $order->customer->phone }}</div>@endif
                         </td>
                         @if($isAdmin)
-                        <td>
-                            <div class="sh-name" style="font-weight:500;">{{ $row->assignedTo?->name ?? '—' }}</div>
-                        </td>
+                        <td><div class="sh-name" style="font-weight:500;">{{ $row->assignedTo?->name ?? '—' }}</div></td>
                         @endif
                         <td style="text-align:right;">
-                            <span style="font-weight:700;color:var(--text);">
-                                ₦{{ number_format($item?->subtotal ?? 0, 0) }}
-                            </span>
+                            <span style="font-weight:700;color:var(--text);">₦{{ number_format($item?->subtotal ?? 0, 0) }}</span>
                         </td>
                         <td><span class="sh-time">{{ $row->assigned_at?->format('d M Y, H:i') ?? '—' }}</span></td>
                         <td><span class="sh-time" style="color:#16a34a;font-weight:600;">{{ $row->completed_at?->format('d M Y, H:i') ?? '—' }}</span></td>
@@ -252,6 +290,7 @@
                 @endforeach
             </tbody>
         </table>
+        @endif
 
         @if($history->hasPages())
             <div class="sh-pagination">
