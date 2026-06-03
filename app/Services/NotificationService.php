@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\Order;
 use App\Models\OrderAssignment;
 use App\Models\OrderItem;
-use App\Models\User;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
@@ -24,7 +23,7 @@ class NotificationService
         $this->sendEmail($order->customer_email, "Order Confirmed – {$order->reference}", $message);
     }
 
-    public function stageUpdated(Order $order, string $stage, string $clientMessage): void
+    public function stageUpdated(Order $order, string $clientMessage): void
     {
         $trackUrl = route('order.track', $order->reference);
         $message  = "Hi {$order->customer_name}, update on order *{$order->reference}*:\n\n"
@@ -95,6 +94,31 @@ class NotificationService
         if ($assignment->notes) {
             $message .= "\n\nNote: {$assignment->notes}";
         }
+
+        $this->whatsapp->send($staff->phone, $message);
+    }
+
+    /**
+     * Remind a staff member that 90% of the estimated production time has elapsed.
+     */
+    public function productionReminderDue(\App\Models\OrderAssignment $assignment): void
+    {
+        $assignment->loadMissing(['assignedTo', 'orderItem.product', 'order']);
+
+        $staff = $assignment->assignedTo;
+        if (! $staff?->phone) return;
+
+        $product    = $assignment->orderItem?->product;
+        $hours      = $product?->estimated_production_hours ?? 0;
+        $itemDesc   = $assignment->orderItem?->description ?? 'an item';
+        $reference  = $assignment->order?->reference ?? 'an order';
+        $stageLabel = \App\Models\OrderItem::PRODUCTION_STAGES[$assignment->department]
+            ?? ucfirst(str_replace('_', ' ', $assignment->department ?? ''));
+
+        $message = "⏰ Hi {$staff->name}, reminder: you have been working on "
+            . "*{$itemDesc}* (order {$reference}) in the *{$stageLabel}* stage "
+            . "for 90% of the estimated {$hours}h. "
+            . "Please wrap up or flag if you need more time.";
 
         $this->whatsapp->send($staff->phone, $message);
     }

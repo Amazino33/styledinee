@@ -208,7 +208,7 @@ class OrderItem extends Model
                     if ($next === 'ready') {
                         $notif->notifyOrderReady($order);
                     } else {
-                        $notif->stageUpdated($order, $next, $clientMessage);
+                        $notif->stageUpdated($order, $clientMessage);
                     }
                 } catch (\Throwable) {
                     // Notification failures must never block stage advancement

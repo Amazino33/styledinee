@@ -11,3 +11,6 @@ Artisan::command('inspire', function () {
 
 // Auto-advance production item stages every 30 minutes
 Schedule::job(StageProgressionJob::class)->everyThirtyMinutes();
+
+// Remind staff when 90% of estimated production time has elapsed
+Schedule::command('production:send-reminders')->everyThirtyMinutes();
