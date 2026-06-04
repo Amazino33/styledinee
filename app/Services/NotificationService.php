@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Order;
 use App\Models\OrderAssignment;
 use App\Models\OrderItem;
+use App\Models\User;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
@@ -103,10 +104,7 @@ class NotificationService
      */
     public function productionReminderDue(\App\Models\OrderAssignment $assignment): void
     {
-        $assignment->loadMissing(['assignedTo', 'orderItem.product', 'order']);
-
-        $staff = $assignment->assignedTo;
-        if (! $staff?->phone) return;
+        $assignment->loadMissing(['assignedTo', 'orderItem.product', 'order.user']);
 
         $product    = $assignment->orderItem?->product;
         $hours      = $product?->estimated_production_hours ?? 0;
@@ -115,12 +113,42 @@ class NotificationService
         $stageLabel = \App\Models\OrderItem::PRODUCTION_STAGES[$assignment->department]
             ?? ucfirst(str_replace('_', ' ', $assignment->department ?? ''));
 
-        $message = "⏰ Hi {$staff->name}, reminder: you have been working on "
-            . "*{$itemDesc}* (order {$reference}) in the *{$stageLabel}* stage "
-            . "for 90% of the estimated {$hours}h. "
-            . "Please wrap up or flag if you need more time.";
+        // 1. Notify the assigned staff member
+        $staff = $assignment->assignedTo;
+        if ($staff?->phone) {
+            $staffMessage = "⏰ Hi {$staff->name}, reminder: you have been working on "
+                . "*{$itemDesc}* (order {$reference}) in the *{$stageLabel}* stage "
+                . "for 90% of the estimated {$hours}h. "
+                . "Please wrap up or flag if you need more time.";
 
-        $this->whatsapp->send($staff->phone, $message);
+            $this->whatsapp->send($staff->phone, $staffMessage);
+        }
+
+        // 2. Notify the cashier who created the order
+        $cashier = $assignment->order?->user;
+        if ($cashier && $cashier->phone && $cashier->id !== $staff?->id) {
+            $cashierMessage = "⏰ Hi {$cashier->name}, heads up: *{$itemDesc}* "
+                . "(order {$reference}, {$stageLabel} stage) assigned to "
+                . ($staff?->name ?? 'a staff member')
+                . " is at 90% of the estimated {$hours}h. Please follow up if needed.";
+
+            $this->whatsapp->send($cashier->phone, $cashierMessage);
+        }
+
+        // 3. Notify all admins
+        $adminMessage = "⏰ Production alert: *{$itemDesc}* (order {$reference}, "
+            . "{$stageLabel} stage) assigned to "
+            . ($staff?->name ?? 'a staff member')
+            . " is at 90% of the estimated {$hours}h deadline.";
+
+        User::role('admin')
+            ->whereNotNull('phone')
+            ->get()
+            ->each(function (User $admin) use ($adminMessage, $cashier, $staff) {
+                // Skip if admin is also the cashier or staff (already notified)
+                if ($admin->id === $cashier?->id || $admin->id === $staff?->id) return;
+                $this->whatsapp->send($admin->phone, "⏰ Hi {$admin->name}, {$adminMessage}");
+            });
     }
 
     /**

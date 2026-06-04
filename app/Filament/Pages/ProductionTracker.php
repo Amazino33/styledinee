@@ -212,7 +212,11 @@ class ProductionTracker extends Page
                 'notes'         => $this->assignNotes ?: null,
             ]);
 
-            app(NotificationService::class)->staffAssigned($newAssignment);
+            try {
+                app(NotificationService::class)->staffAssigned($newAssignment);
+            } catch (\Throwable) {
+                // Notification failure must not block assignment
+            }
 
             $staffName = $staffMember?->name;
         }

@@ -9,6 +9,8 @@ use App\Models\User;
 
 class AssignmentService
 {
+    public function __construct(private NotificationService $notif) {}
+
     /**
      * Auto-assign a user with the fewest active assignments in the given department/role.
      */
@@ -21,7 +23,7 @@ class AssignmentService
 
         if (! $candidate) return null;
 
-        return OrderAssignment::create([
+        $assignment = OrderAssignment::create([
             'order_id'      => $order->id,
             'order_item_id' => $item?->id,
             'assigned_to'   => $candidate->id,
@@ -30,6 +32,14 @@ class AssignmentService
             'status'        => 'assigned',
             'assigned_at'   => now(),
         ]);
+
+        try {
+            $this->notif->staffAssigned($assignment);
+        } catch (\Throwable) {
+            // Notification failure must not block assignment
+        }
+
+        return $assignment;
     }
 
     /**
