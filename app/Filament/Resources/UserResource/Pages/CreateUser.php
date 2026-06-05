@@ -12,11 +12,11 @@ class CreateUser extends CreateRecord
 
     protected function handleRecordCreation(array $data): Model
     {
-        $role = $data['role'] ?? 'cashier';
-        unset($data['role']);
+        $roles = $data['roles'] ?? ['cashier'];
+        unset($data['roles']);
 
         $user = static::getModel()::create($data);
-        $user->syncRoles([$role]);
+        $user->syncRoles($roles);
 
         return $user;
     }

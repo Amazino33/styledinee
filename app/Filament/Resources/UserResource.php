@@ -51,8 +51,9 @@ class UserResource extends Resource
                         ->dehydrateStateUsing(fn ($state) => Hash::make($state))
                         ->dehydrated(fn ($state) => filled($state))
                         ->hint(fn (string $operation) => $operation === 'edit' ? 'Leave blank to keep current password' : null),
-                    Select::make('role')
-                        ->label('Role')->required()
+                    Select::make('roles')
+                        ->label('Roles')->required()
+                        ->multiple()
                         ->options([
                             'admin'       => 'Admin',
                             'cashier'     => 'Cashier',
@@ -62,10 +63,10 @@ class UserResource extends Resource
                             'delivery'    => 'Delivery',
                             'printer'     => 'Printer',
                         ])
-                        ->default('cashier')
+                        ->default(['cashier'])
                         ->afterStateHydrated(function ($component, $record) {
                             if ($record) {
-                                $component->state($record->roles->first()?->name);
+                                $component->state($record->roles->pluck('name')->toArray());
                             }
                         }),
                     Toggle::make('is_active')->label('Active')->default(true)->inline(false),

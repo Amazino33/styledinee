@@ -987,6 +987,32 @@
                 @endif
             @endif
 
+            {{-- Deposit policy hint --}}
+            @php
+                $posPolicy  = \App\Models\AppSetting::get('payment_policy', 'half_upfront');
+                $posPct     = max(1, (int) \App\Models\AppSetting::get('deposit_percent', 50));
+                $posMin     = $this->getTotal() * ($posPct / 100);
+                $posPaid    = $this->getSplitTotal();
+                $posShortfall = max(0, $posMin - $posPaid);
+            @endphp
+            @if($posPolicy === 'half_upfront')
+                @if($posShortfall > 0)
+                <div style="font-size:.72rem;color:#b45309;background:#fef3c7;border:1px solid #fde68a;
+                            border-radius:6px;padding:.4rem .65rem;margin-bottom:.4rem;text-align:center;">
+                    Min. deposit: ₦{{ number_format($posMin, 0) }} ({{ $posPct }}%) — still need ₦{{ number_format($posShortfall, 0) }}
+                </div>
+                @else
+                <div style="font-size:.72rem;color:#166534;background:#f0fdf4;border:1px solid #bbf7d0;
+                            border-radius:6px;padding:.4rem .65rem;margin-bottom:.4rem;text-align:center;">
+                    ✓ Deposit met ({{ $posPct }}% minimum)
+                </div>
+                @endif
+            @else
+            <div style="font-size:.72rem;color:var(--text3);text-align:center;margin-bottom:.4rem;">
+                Pay later policy — no deposit required
+            </div>
+            @endif
+
             <button wire:click="completeSale" wire:loading.attr="disabled" class="complete-btn">
                 <span wire:loading.remove wire:target="completeSale">✓ Complete Sale</span>
                 <span wire:loading wire:target="completeSale" class="btn-loading">

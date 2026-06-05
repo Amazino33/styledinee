@@ -17,13 +17,13 @@ class EditUser extends EditRecord
 
     protected function handleRecordUpdate(\Illuminate\Database\Eloquent\Model $record, array $data): \Illuminate\Database\Eloquent\Model
     {
-        $role = $data['role'] ?? null;
-        unset($data['role']);
+        $roles = $data['roles'] ?? null;
+        unset($data['roles']);
 
         $record->update($data);
 
-        if ($role) {
-            $record->syncRoles([$role]);
+        if ($roles) {
+            $record->syncRoles($roles);
         }
 
         return $record;

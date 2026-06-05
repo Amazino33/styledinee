@@ -28,6 +28,13 @@
                     <span class="order-row__date" style="color:var(--text-muted);font-size:.82rem;white-space:nowrap;">
                         {{ $order->created_at->format('d M Y') }}
                     </span>
+                    <a href="{{ route('account.order.track', $order->reference) }}"
+                       onclick="event.stopPropagation()"
+                       style="font-size:.72rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+                              color:var(--gold);border:1px solid var(--gold);border-radius:6px;
+                              padding:.25rem .65rem;white-space:nowrap;">
+                        Track
+                    </a>
                     <svg style="width:1rem;height:1rem;color:var(--text-muted);transition:transform .2s;{{ $expandedId === $order->id ? 'transform:rotate(180deg)' : '' }}"
                         fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>

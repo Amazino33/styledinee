@@ -58,6 +58,11 @@ class WhatsAppService
 
         $number = preg_replace('/\D/', '', $phone);
 
+        // Normalise Nigerian numbers: 08012345678 → 2348012345678
+        if (strlen($number) === 11 && str_starts_with($number, '0')) {
+            $number = '234' . substr($number, 1);
+        }
+
         try {
             $response = Http::get('https://api.wawp.net/v2/send/text', [
                 'instance_id'  => $instanceId,

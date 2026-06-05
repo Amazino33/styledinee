@@ -1047,14 +1047,19 @@ class Pos extends Page
         $total      = $this->getTotal();
         $amountPaid = $this->getSplitTotal();
 
-        $minDeposit = $total * 0.5;
-        if ($amountPaid < $minDeposit) {
-            Notification::make()
-                ->title('Minimum deposit required')
-                ->body('At least 50% (â‚¦' . number_format($minDeposit, 0) . ') must be paid before confirming this order.')
-                ->danger()
-                ->send();
-            return;
+        $policy  = \App\Models\AppSetting::get('payment_policy', 'half_upfront');
+        $percent = max(1, (int) \App\Models\AppSetting::get('deposit_percent', 50));
+
+        if ($policy === 'half_upfront') {
+            $minDeposit = $total * ($percent / 100);
+            if ($amountPaid < $minDeposit) {
+                Notification::make()
+                    ->title('Minimum deposit required')
+                    ->body("At least {$percent}% (₦" . number_format($minDeposit, 0) . ') must be paid before confirming this order.')
+                    ->danger()
+                    ->send();
+                return;
+            }
         }
 
         $paymentStatus = match (true) {

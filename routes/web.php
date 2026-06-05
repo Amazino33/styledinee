@@ -5,6 +5,7 @@ use App\Http\Controllers\FrontendController;
 use App\Http\Controllers\PrintOrderItemController;
 use App\Livewire\Customer\Dashboard;
 use App\Livewire\Customer\Login;
+use App\Livewire\Customer\OrderTrack;
 use App\Livewire\Customer\Orders;
 use App\Livewire\Customer\Profile;
 use App\Livewire\Customer\SetUsername;
@@ -39,10 +40,11 @@ Route::prefix('account')->name('account.')->group(function () {
 
     // Require login + username set
     Route::middleware(['auth.customer', 'customer.username'])->group(function () {
-        Route::get('/dashboard', Dashboard::class)->name('dashboard');
-        Route::get('/orders',    Orders::class)->name('orders');
-        Route::get('/wallet',    Wallet::class)->name('wallet');
-        Route::get('/profile',   Profile::class)->name('profile');
+        Route::get('/dashboard',          Dashboard::class)->name('dashboard');
+        Route::get('/orders',             Orders::class)->name('orders');
+        Route::get('/orders/{reference}', OrderTrack::class)->name('order.track');
+        Route::get('/wallet',             Wallet::class)->name('wallet');
+        Route::get('/profile',            Profile::class)->name('profile');
     });
 });
 

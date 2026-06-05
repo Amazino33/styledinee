@@ -17,8 +17,9 @@ class NotificationService
 
     public function orderConfirmed(Order $order): void
     {
-        $message = "Hi {$order->customer_name}, your order {$order->reference} has been received. "
-            . "Track it at: " . route('order.track', $order->reference);
+        $trackUrl = route('account.order.track', $order->reference);
+        $message  = "Hi {$order->customer_name}, your order *{$order->reference}* has been received and confirmed. "
+            . "Track your order in real-time: {$trackUrl}";
 
         $this->whatsapp->send($order->customer_phone, $message);
         $this->sendEmail($order->customer_email, "Order Confirmed – {$order->reference}", $message);
@@ -26,7 +27,7 @@ class NotificationService
 
     public function stageUpdated(Order $order, string $clientMessage): void
     {
-        $trackUrl = route('order.track', $order->reference);
+        $trackUrl = route('account.order.track', $order->reference);
         $message  = "Hi {$order->customer_name}, update on order *{$order->reference}*:\n\n"
             . "{$clientMessage}\n\n"
             . "Track your order: {$trackUrl}";
@@ -37,8 +38,10 @@ class NotificationService
 
     public function notifyOrderReady(Order $order): void
     {
-        $message = "Hi {$order->customer_name}, great news! Your order {$order->reference} is ready for collection at Styledinee. "
-            . "Please come in at your earliest convenience.";
+        $trackUrl = route('account.order.track', $order->reference);
+        $message  = "Hi {$order->customer_name}, great news! 🎉 Your order *{$order->reference}* is ready for collection at Styledinee. "
+            . "Please come in at your earliest convenience.\n\n"
+            . "View order details: {$trackUrl}";
 
         $this->whatsapp->send($order->customer_phone, $message);
         $this->sendEmail($order->customer_email, "Your Order is Ready – {$order->reference}", $message);
@@ -81,7 +84,10 @@ class NotificationService
         $assignment->loadMissing(['assignedTo', 'order', 'orderItem']);
 
         $staff = $assignment->assignedTo;
-        if (! $staff?->phone) return;
+        if (! $staff?->phone) {
+            Log::warning("[Notify] staffAssigned: user #{$staff?->id} ({$staff?->name}) has no phone number — skipping WhatsApp.");
+            return;
+        }
 
         $stageLabel = OrderItem::PRODUCTION_STAGES[$assignment->department]
             ?? ucfirst(str_replace('_', ' ', $assignment->department));
@@ -90,7 +96,7 @@ class NotificationService
         $itemDesc  = $assignment->orderItem->description ?? 'an item';
 
         $message = "Hi {$staff->name}, you have been assigned to a *{$stageLabel}* task "
-            . "for order {$reference} ({$itemDesc}). Please check the production tracker.";
+            . "for order {$reference} ({$itemDesc}). Please check your queue.";
 
         if ($assignment->notes) {
             $message .= "\n\nNote: {$assignment->notes}";
