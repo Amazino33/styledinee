@@ -14,6 +14,7 @@ class Order extends Model
         'pickup_date', 'delivery_date', 'estimated_completion_date',
         'delivery_type', 'delivery_notes', 'delivery_user_id', 'handed_over_by',
         'coupon_id', 'coupon_discount', 'referral_credit_used',
+        'driver_cash_pending',
     ];
 
     protected $casts = [
@@ -21,6 +22,7 @@ class Order extends Model
         'amount_paid'               => 'decimal:2',
         'coupon_discount'           => 'decimal:2',
         'referral_credit_used'      => 'decimal:2',
+        'driver_cash_pending'       => 'boolean',
         'pickup_date'               => 'date',
         'delivery_date'             => 'date',
         'estimated_completion_date' => 'date',

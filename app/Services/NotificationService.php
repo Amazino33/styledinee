@@ -6,6 +6,7 @@ use App\Models\Order;
 use App\Models\OrderAssignment;
 use App\Models\OrderItem;
 use App\Models\User;
+use Filament\Notifications\Notification as FilamentNotification;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
@@ -23,6 +24,13 @@ class NotificationService
 
         $this->whatsapp->send($order->customer_phone, $message);
         $this->sendEmail($order->customer_email, "Order Confirmed – {$order->reference}", $message);
+
+        $this->notifyAdminsCashiers(
+            "New order confirmed",
+            "Order {$order->reference} placed for {$order->customer_name}.",
+            'heroicon-o-shopping-bag',
+            'success'
+        );
     }
 
     public function stageUpdated(Order $order, string $clientMessage): void
@@ -45,6 +53,13 @@ class NotificationService
 
         $this->whatsapp->send($order->customer_phone, $message);
         $this->sendEmail($order->customer_email, "Your Order is Ready – {$order->reference}", $message);
+
+        $this->notifyAdminsCashiers(
+            "Order ready for collection",
+            "Order {$order->reference} for {$order->customer_name} is ready.",
+            'heroicon-o-check-circle',
+            'success'
+        );
     }
 
     public function orderHandedOver(Order $order): void
@@ -55,6 +70,13 @@ class NotificationService
             . "You will receive a delivery OTP once it is collected. Please keep your phone nearby.";
 
         $this->whatsapp->send($order->customer_phone, $message);
+
+        $this->notifyAdminsCashiers(
+            "Order handed over for delivery",
+            "Order {$order->reference} handed to {$deliveryName}.",
+            'heroicon-o-truck',
+            'info'
+        );
     }
 
     public function orderCollectedByRider(Order $order, string $otp): void
@@ -84,10 +106,7 @@ class NotificationService
         $assignment->loadMissing(['assignedTo', 'order', 'orderItem']);
 
         $staff = $assignment->assignedTo;
-        if (! $staff?->phone) {
-            Log::warning("[Notify] staffAssigned: user #{$staff?->id} ({$staff?->name}) has no phone number — skipping WhatsApp.");
-            return;
-        }
+        if (! $staff) return;
 
         $stageLabel = OrderItem::PRODUCTION_STAGES[$assignment->department]
             ?? ucfirst(str_replace('_', ' ', $assignment->department));
@@ -95,14 +114,27 @@ class NotificationService
         $reference = $assignment->order->reference ?? 'an order';
         $itemDesc  = $assignment->orderItem->description ?? 'an item';
 
-        $message = "Hi {$staff->name}, you have been assigned to a *{$stageLabel}* task "
-            . "for order {$reference} ({$itemDesc}). Please check your queue.";
+        // WhatsApp (requires phone number)
+        if ($staff->phone) {
+            $message = "Hi {$staff->name}, you have been assigned to a *{$stageLabel}* task "
+                . "for order {$reference} ({$itemDesc}). Please check your queue.";
 
-        if ($assignment->notes) {
-            $message .= "\n\nNote: {$assignment->notes}";
+            if ($assignment->notes) {
+                $message .= "\n\nNote: {$assignment->notes}";
+            }
+
+            $this->whatsapp->send($staff->phone, $message);
+        } else {
+            Log::warning("[Notify] staffAssigned: user #{$staff->id} ({$staff->name}) has no phone number — skipping WhatsApp.");
         }
 
-        $this->whatsapp->send($staff->phone, $message);
+        // In-app notification (no phone required)
+        FilamentNotification::make()
+            ->title("New task assigned — {$stageLabel}")
+            ->body("{$itemDesc} · Order {$reference}" . ($assignment->notes ? "\nNote: {$assignment->notes}" : ''))
+            ->icon('heroicon-o-clipboard-document-list')
+            ->iconColor('warning')
+            ->sendToDatabase($staff);
     }
 
     /**
@@ -119,6 +151,8 @@ class NotificationService
         $stageLabel = \App\Models\OrderItem::PRODUCTION_STAGES[$assignment->department]
             ?? ucfirst(str_replace('_', ' ', $assignment->department ?? ''));
 
+        $reminderBody = "{$itemDesc} · Order {$reference} ({$stageLabel}) is at 90% of the estimated {$hours}h.";
+
         // 1. Notify the assigned staff member
         $staff = $assignment->assignedTo;
         if ($staff?->phone) {
@@ -128,6 +162,15 @@ class NotificationService
                 . "Please wrap up or flag if you need more time.";
 
             $this->whatsapp->send($staff->phone, $staffMessage);
+        }
+
+        if ($staff) {
+            FilamentNotification::make()
+                ->title('Production deadline approaching')
+                ->body($reminderBody)
+                ->icon('heroicon-o-clock')
+                ->iconColor('warning')
+                ->sendToDatabase($staff);
         }
 
         // 2. Notify the cashier who created the order
@@ -141,20 +184,36 @@ class NotificationService
             $this->whatsapp->send($cashier->phone, $cashierMessage);
         }
 
-        // 3. Notify all admins
+        if ($cashier && $cashier->id !== $staff?->id) {
+            FilamentNotification::make()
+                ->title('Production deadline approaching')
+                ->body($reminderBody)
+                ->icon('heroicon-o-clock')
+                ->iconColor('warning')
+                ->sendToDatabase($cashier);
+        }
+
+        // 3. Notify all admins (excluding staff and cashier already notified above)
         $adminMessage = "⏰ Production alert: *{$itemDesc}* (order {$reference}, "
             . "{$stageLabel} stage) assigned to "
             . ($staff?->name ?? 'a staff member')
             . " is at 90% of the estimated {$hours}h deadline.";
 
-        User::role('admin')
-            ->whereNotNull('phone')
-            ->get()
-            ->each(function (User $admin) use ($adminMessage, $cashier, $staff) {
-                // Skip if admin is also the cashier or staff (already notified)
-                if ($admin->id === $cashier?->id || $admin->id === $staff?->id) return;
-                $this->whatsapp->send($admin->phone, "⏰ Hi {$admin->name}, {$adminMessage}");
-            });
+        $skipIds = array_filter([$staff?->id, $cashier?->id]);
+        $admins  = User::role('admin')->whereNotIn('id', $skipIds)->get();
+
+        $admins->filter(fn ($a) => $a->phone)->each(function (User $admin) use ($adminMessage) {
+            $this->whatsapp->send($admin->phone, "⏰ Hi {$admin->name}, {$adminMessage}");
+        });
+
+        if ($admins->isNotEmpty()) {
+            FilamentNotification::make()
+                ->title('Production deadline approaching')
+                ->body($reminderBody)
+                ->icon('heroicon-o-clock')
+                ->iconColor('warning')
+                ->sendToDatabase($admins);
+        }
     }
 
     /**
@@ -168,6 +227,19 @@ class NotificationService
     }
 
     // ── Private helpers ────────────────────────────────────────────────────────
+
+    private function notifyAdminsCashiers(string $title, string $body, string $icon, string $iconColor): void
+    {
+        $users = User::role(['admin', 'cashier'])->get();
+        if ($users->isEmpty()) return;
+
+        FilamentNotification::make()
+            ->title($title)
+            ->body($body)
+            ->icon($icon)
+            ->iconColor($iconColor)
+            ->sendToDatabase($users);
+    }
 
     private function sendEmail(?string $email, string $subject, string $body): void
     {

@@ -129,6 +129,24 @@ class Pos extends Page
     public int    $removeBomBomIndex  = -1;
     public string $removeBomReason    = '';
 
+    // â”€â”€ Add BOM Inline State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    public int    $addBomItemIndex = -1;
+    public string $addBomSearch    = '';
+    public array  $addBomResults   = [];
+    public ?int   $addBomProductId = null;
+    public string $addBomQty       = '';
+    public string $addBomUnit      = '';
+    public string $addBomUnitPrice = '';
+
+    // â”€â”€ Modal Add BOM State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    public bool   $modalAddBomOpen      = false;
+    public string $modalAddBomSearch    = '';
+    public array  $modalAddBomResults   = [];
+    public ?int   $modalAddBomProductId = null;
+    public string $modalAddBomQty       = '';
+    public string $modalAddBomUnit      = '';
+    public string $modalAddBomUnitPrice = '';
+
     // â”€â”€ Post-sale State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     public bool $showReceipt = false;
     public ?int  $completedOrderId = null;
@@ -416,6 +434,99 @@ class Pos extends Page
         $this->removeBomReason    = '';
     }
 
+    // â"€â"€ Add BOM Inline â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
+    public function toggleAddBom(int $itemIndex): void
+    {
+        if ($this->addBomItemIndex === $itemIndex) {
+            $this->cancelAddBom();
+        } else {
+            $this->cancelAddBom();
+            $this->addBomItemIndex = $itemIndex;
+        }
+    }
+
+    public function updatedAddBomSearch(): void
+    {
+        $this->addBomProductId = null;
+        $this->addBomUnit      = '';
+        $this->addBomUnitPrice = '';
+
+        if (strlen(trim($this->addBomSearch)) < 2) {
+            $this->addBomResults = [];
+            return;
+        }
+
+        $this->addBomResults = Product::where('is_material', true)
+            ->where('is_active', true)
+            ->where('name', 'like', '%' . trim($this->addBomSearch) . '%')
+            ->limit(6)
+            ->get(['id', 'name', 'unit', 'price'])
+            ->map(fn ($p) => [
+                'id'         => $p->id,
+                'name'       => $p->name,
+                'unit'       => $p->unit ?? '',
+                'unit_price' => (float) $p->price,
+            ])
+            ->all();
+    }
+
+    public function selectBomResult(int $productId): void
+    {
+        $product = Product::find($productId);
+        if (! $product) return;
+
+        $this->addBomProductId = $productId;
+        $this->addBomSearch    = $product->name;
+        $this->addBomUnit      = $product->unit ?? '';
+        $this->addBomUnitPrice = (string) $product->price;
+        $this->addBomResults   = [];
+    }
+
+    public function confirmAddBomLine(): void
+    {
+        $this->validate([
+            'addBomSearch'    => ['required', 'string', 'min:2'],
+            'addBomQty'       => ['required', 'numeric', 'min:0.001'],
+            'addBomUnitPrice' => ['required', 'numeric', 'min:0'],
+        ], [
+            'addBomSearch.required'    => 'Material name is required.',
+            'addBomSearch.min'         => 'Material name must be at least 2 characters.',
+            'addBomQty.required'       => 'Quantity is required.',
+            'addBomQty.min'            => 'Quantity must be greater than zero.',
+            'addBomUnitPrice.required' => 'Unit price is required.',
+        ]);
+
+        $qty       = (float) $this->addBomQty;
+        $unitPrice = (float) $this->addBomUnitPrice;
+        $i         = $this->addBomItemIndex;
+
+        $items = $this->items;
+        if (isset($items[$i])) {
+            $items[$i]['bom'][] = [
+                'id'         => null,
+                'name'       => trim($this->addBomSearch),
+                'quantity'   => $qty,
+                'unit'       => trim($this->addBomUnit),
+                'unit_price' => $unitPrice,
+                'line_total' => round($unitPrice * $qty, 2),
+            ];
+            $this->items = $items;
+        }
+
+        $this->cancelAddBom();
+    }
+
+    public function cancelAddBom(): void
+    {
+        $this->addBomItemIndex = -1;
+        $this->addBomSearch    = '';
+        $this->addBomResults   = [];
+        $this->addBomProductId = null;
+        $this->addBomQty       = '';
+        $this->addBomUnit      = '';
+        $this->addBomUnitPrice = '';
+    }
+
     // â"€â"€ Modal BOM line removal (production modal step 4) â"€â"€â"€â"€â"€â"€â"€â"€â"€
     public function openModalBomRemove(int $bomIndex): void
     {
@@ -458,6 +569,99 @@ class Pos extends Page
         $this->modalBomRemoveIndex  = -1;
     }
 
+    // â"€â"€ Modal Add-BOM Methods â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
+    public function toggleModalAddBom(): void
+    {
+        $this->modalAddBomOpen      = ! $this->modalAddBomOpen;
+        $this->modalAddBomSearch    = '';
+        $this->modalAddBomResults   = [];
+        $this->modalAddBomProductId = null;
+        $this->modalAddBomQty       = '';
+        $this->modalAddBomUnit      = '';
+        $this->modalAddBomUnitPrice = '';
+    }
+
+    public function updatedModalAddBomSearch(): void
+    {
+        $this->modalAddBomProductId = null;
+        $this->modalAddBomUnit      = '';
+        $this->modalAddBomUnitPrice = '';
+
+        $q = trim($this->modalAddBomSearch);
+        if (strlen($q) < 2) {
+            $this->modalAddBomResults = [];
+            return;
+        }
+
+        $this->modalAddBomResults = \App\Models\Product::where('is_material', true)
+            ->where('is_active', true)
+            ->where('name', 'like', "%{$q}%")
+            ->limit(6)
+            ->get(['id', 'name', 'unit', 'price'])
+            ->toArray();
+    }
+
+    public function selectModalBomResult(int $productId): void
+    {
+        $product = \App\Models\Product::find($productId);
+        if (! $product) return;
+
+        $this->modalAddBomProductId = $productId;
+        $this->modalAddBomSearch    = $product->name;
+        $this->modalAddBomUnit      = $product->unit ?? '';
+        $this->modalAddBomUnitPrice = (string) (float) $product->price;
+        $this->modalAddBomResults   = [];
+    }
+
+    public function confirmModalAddBomLine(): void
+    {
+        $this->validate([
+            'modalAddBomSearch'    => 'required|min:2',
+            'modalAddBomQty'       => 'required|numeric|min:0.001',
+            'modalAddBomUnitPrice' => 'required|numeric|min:0',
+        ], [
+            'modalAddBomSearch.required'    => 'Enter or select a material name.',
+            'modalAddBomSearch.min'         => 'Name must be at least 2 characters.',
+            'modalAddBomQty.required'       => 'Quantity is required.',
+            'modalAddBomQty.numeric'        => 'Quantity must be a number.',
+            'modalAddBomQty.min'            => 'Quantity must be greater than 0.',
+            'modalAddBomUnitPrice.required' => 'Unit price is required.',
+            'modalAddBomUnitPrice.numeric'  => 'Unit price must be a number.',
+            'modalAddBomUnitPrice.min'      => 'Unit price cannot be negative.',
+        ]);
+
+        $qty       = (float) $this->modalAddBomQty;
+        $unitPrice = (float) $this->modalAddBomUnitPrice;
+
+        $this->modalBom[] = [
+            'id'         => null,
+            'name'       => trim($this->modalAddBomSearch),
+            'quantity'   => $qty,
+            'unit'       => trim($this->modalAddBomUnit),
+            'unit_price' => $unitPrice,
+            'line_total' => round($unitPrice * $qty, 2),
+        ];
+
+        $this->modalAddBomOpen      = false;
+        $this->modalAddBomSearch    = '';
+        $this->modalAddBomResults   = [];
+        $this->modalAddBomProductId = null;
+        $this->modalAddBomQty       = '';
+        $this->modalAddBomUnit      = '';
+        $this->modalAddBomUnitPrice = '';
+    }
+
+    public function cancelModalAddBom(): void
+    {
+        $this->modalAddBomOpen      = false;
+        $this->modalAddBomSearch    = '';
+        $this->modalAddBomResults   = [];
+        $this->modalAddBomProductId = null;
+        $this->modalAddBomQty       = '';
+        $this->modalAddBomUnit      = '';
+        $this->modalAddBomUnitPrice = '';
+    }
+
     // ── Production Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     public function openProductionModal(int $productId): void
     {
@@ -475,6 +679,13 @@ class Pos extends Page
         $this->showModalBomRemove   = false;
         $this->modalBomRemoveIndex  = -1;
         $this->modalBomRemoveReason = '';
+        $this->modalAddBomOpen      = false;
+        $this->modalAddBomSearch    = '';
+        $this->modalAddBomResults   = [];
+        $this->modalAddBomProductId = null;
+        $this->modalAddBomQty       = '';
+        $this->modalAddBomUnit      = '';
+        $this->modalAddBomUnitPrice = '';
         $this->modalWashingRequired = true;
         $this->modalWashingSkipReason = '';
         $this->modalNotes           = '';
@@ -508,8 +719,15 @@ class Pos extends Page
 
     public function closeProductionModal(): void
     {
-        $this->showProductModal = false;
-        $this->modalProductId   = null;
+        $this->showProductModal     = false;
+        $this->modalProductId       = null;
+        $this->modalAddBomOpen      = false;
+        $this->modalAddBomSearch    = '';
+        $this->modalAddBomResults   = [];
+        $this->modalAddBomProductId = null;
+        $this->modalAddBomQty       = '';
+        $this->modalAddBomUnit      = '';
+        $this->modalAddBomUnitPrice = '';
     }
 
     public function getModalProduct(): ?Product
@@ -1179,6 +1397,11 @@ class Pos extends Page
             ->title('Sale completed â€” ' . $order->reference)
             ->success()
             ->send();
+    }
+
+    public function clearCart(): void
+    {
+        $this->newSale();
     }
 
     public function newSale(): void

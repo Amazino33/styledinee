@@ -4,6 +4,8 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\OrderResource\Pages;
 use App\Models\Order;
+use App\Models\Payment;
+use App\Models\User;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Repeater;
@@ -12,6 +14,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Notifications\Notification;
+use Filament\Notifications\Notification as FilamentNotification;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Resources\Resource;
@@ -181,6 +184,14 @@ class OrderResource extends Resource
                         'paid' => 'success',
                         default => 'gray',
                     }),
+                Tables\Columns\IconColumn::make('driver_cash_pending')
+                    ->label('Cash Due')
+                    ->boolean()
+                    ->trueIcon('heroicon-o-banknotes')
+                    ->trueColor('warning')
+                    ->falseIcon('heroicon-o-minus-small')
+                    ->falseColor('gray')
+                    ->tooltip(fn (bool $state) => $state ? 'Driver cash pending handover to cashier' : null),
                 Tables\Columns\TextColumn::make('delivery_type')
                     ->label('Delivery')
                     ->badge()
@@ -214,9 +225,141 @@ class OrderResource extends Resource
                     'partial' => 'Partial',
                     'paid' => 'Paid',
                 ]),
+                Tables\Filters\TernaryFilter::make('driver_cash_pending')
+                    ->label('Driver Cash')
+                    ->trueLabel('Pending Handover')
+                    ->falseLabel('No Pending Handover')
+                    ->placeholder('All orders'),
             ])
             ->recordActions([
                 \Filament\Actions\EditAction::make(),
+
+                // ── Record Payment (transfer after delivery / debt balancing) ─────
+                Action::make('recordPayment')
+                    ->label('Record Payment')
+                    ->icon('heroicon-o-banknotes')
+                    ->color('success')
+                    ->visible(fn (Order $record) =>
+                        $record->payment_status !== 'paid'
+                        && ! $record->driver_cash_pending
+                        && auth()->user()?->hasAnyRole(['admin', 'cashier'])
+                    )
+                    ->modalHeading(fn (Order $record) =>
+                        'Record Payment — Balance Due: ₦' . number_format(
+                            max(0, (float) $record->total_amount - (float) $record->amount_paid), 0
+                        )
+                    )
+                    ->fillForm(fn (Order $record) => [
+                        'amount' => number_format(
+                            max(0, (float) $record->total_amount - (float) $record->amount_paid),
+                            2, '.', ''
+                        ),
+                        'method' => 'transfer',
+                    ])
+                    ->form([
+                        Select::make('method')
+                            ->label('Payment Method')
+                            ->required()
+                            ->options([
+                                'cash'     => '💵 Cash',
+                                'transfer' => '🏦 Bank Transfer',
+                                'card'     => '💳 Card',
+                                'pos'      => '🖥 POS Terminal',
+                            ])
+                            ->live(),
+
+                        TextInput::make('amount')
+                            ->label('Amount (₦)')
+                            ->required()
+                            ->numeric()
+                            ->minValue(0.01),
+
+                        TextInput::make('reference')
+                            ->label('Transfer Reference')
+                            ->placeholder('Bank ref, last 4 digits, or transaction ID')
+                            ->required(fn (Get $get) => $get('method') === 'transfer')
+                            ->visible(fn (Get $get) => $get('method') === 'transfer'),
+
+                        Textarea::make('notes')
+                            ->label('Notes')
+                            ->rows(2)
+                            ->placeholder('Optional — e.g. "customer confirmed payment via call"'),
+                    ])
+                    ->action(function (Order $record, array $data) {
+                        $balanceDue = max(0, (float) $record->total_amount - (float) $record->amount_paid);
+                        $amount     = min((float) $data['amount'], $balanceDue);
+
+                        if ($amount <= 0) {
+                            Notification::make()->title('Invalid amount.')->danger()->send();
+                            return;
+                        }
+
+                        $notes = trim($data['notes'] ?? '');
+                        if ($data['method'] === 'transfer' && ! empty($data['reference'])) {
+                            $notes = 'Transfer ref: ' . $data['reference'] . ($notes ? "\n{$notes}" : '');
+                        }
+
+                        $newAmountPaid = round((float) $record->amount_paid + $amount, 2);
+                        $newStatus     = $newAmountPaid >= (float) $record->total_amount ? 'paid' : 'partial';
+
+                        $record->update([
+                            'amount_paid'    => $newAmountPaid,
+                            'payment_status' => $newStatus,
+                        ]);
+
+                        $record->recordPayment($amount, $data['method'], $notes ?: null);
+
+                        $others = User::role(['admin', 'cashier'])->where('id', '!=', auth()->id())->get();
+                        if ($others->isNotEmpty()) {
+                            FilamentNotification::make()
+                                ->title('Payment recorded')
+                                ->body('₦' . number_format($amount, 0) . ' via ' . Payment::methodLabel($data['method']) . ' for order ' . $record->reference . '.')
+                                ->icon('heroicon-o-banknotes')
+                                ->iconColor('success')
+                                ->sendToDatabase($others);
+                        }
+
+                        $outstanding = (float) $record->total_amount - $newAmountPaid;
+                        Notification::make()
+                            ->title('Payment recorded — ' . ($newStatus === 'paid'
+                                ? 'Order fully paid.'
+                                : '₦' . number_format($outstanding, 0) . ' still outstanding.'))
+                            ->success()
+                            ->send();
+                    }),
+
+                // ── Confirm cash received from delivery driver ────────────────────
+                Action::make('confirmDriverCash')
+                    ->label('Confirm Cash from Driver')
+                    ->icon('heroicon-o-hand-raised')
+                    ->color('warning')
+                    ->visible(fn (Order $record) =>
+                        $record->driver_cash_pending
+                        && auth()->user()?->hasAnyRole(['admin', 'cashier'])
+                    )
+                    ->requiresConfirmation()
+                    ->modalHeading(fn (Order $record) => "Confirm Cash Receipt — {$record->reference}")
+                    ->modalDescription(fn (Order $record) =>
+                        'Confirm that you have physically received the cash for order ' .
+                        $record->reference . ' (' . $record->customer_name . ') from the delivery driver. ' .
+                        'This clears the pending handover flag.'
+                    )
+                    ->modalSubmitActionLabel('Yes, I Have the Cash')
+                    ->action(function (Order $record) {
+                        $record->update(['driver_cash_pending' => false]);
+
+                        $others = User::role(['admin', 'cashier'])->where('id', '!=', auth()->id())->get();
+                        if ($others->isNotEmpty()) {
+                            FilamentNotification::make()
+                                ->title('Driver cash confirmed')
+                                ->body('Cash for order ' . $record->reference . ' confirmed received by ' . auth()->user()->name . '.')
+                                ->icon('heroicon-o-hand-raised')
+                                ->iconColor('success')
+                                ->sendToDatabase($others);
+                        }
+
+                        Notification::make()->title('Cash receipt confirmed.')->success()->send();
+                    }),
 
                 Action::make('changeDelivery')
                     ->label('Change Delivery')

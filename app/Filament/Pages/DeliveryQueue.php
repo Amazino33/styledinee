@@ -302,8 +302,9 @@ class DeliveryQueue extends Page
         $newStatus = $newAmountPaid >= $total ? 'paid' : 'partial';
 
         $order->update([
-            'amount_paid'    => $newAmountPaid,
-            'payment_status' => $newStatus,
+            'amount_paid'        => $newAmountPaid,
+            'payment_status'     => $newStatus,
+            'driver_cash_pending' => true,
         ]);
 
         $order->recordPayment($collected, 'cash', 'Cash collected on delivery by ' . auth()->user()->name . '.');

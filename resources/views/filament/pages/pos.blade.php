@@ -206,6 +206,26 @@
 .ci-bom-removed-name { text-decoration:line-through; color:var(--text); }
 .ci-bom-removed-reason { font-style:italic; }
 .ci-bom-removed-meta { opacity:.65; white-space:nowrap; margin-left:auto; }
+/* ── Add BOM inline ── */
+.ci-bom-add-btn { width:100%; margin-top:.35rem; padding:.3rem; background:none; border:1px dashed var(--border); border-radius:6px; font-size:.7rem; font-weight:600; color:var(--gold); cursor:pointer; transition:all .15s; text-align:center; }
+.ci-bom-add-btn:hover { background:rgba(201,168,76,.08); border-color:var(--gold); }
+.ci-bom-add-form { margin-top:.35rem; padding:.5rem; background:var(--bg2); border:1px solid var(--border); border-radius:8px; display:flex; flex-direction:column; gap:.4rem; }
+.bom-add-search { position:relative; }
+.bom-add-input { width:100%; padding:.35rem .5rem; border:1px solid var(--border); border-radius:6px; background:var(--bg); color:var(--text); font-size:.75rem; outline:none; box-sizing:border-box; font-family:inherit; }
+.bom-add-input:focus { border-color:var(--gold); }
+.bom-add-dropdown { position:absolute; z-index:50; left:0; right:0; top:100%; margin-top:2px; background:var(--bg); border:1px solid var(--border); border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,.12); overflow:hidden; }
+.bom-add-result { width:100%; padding:.4rem .6rem; text-align:left; font-size:.73rem; background:none; border:none; cursor:pointer; color:var(--text); transition:background .1s; display:flex; justify-content:space-between; align-items:center; gap:.4rem; font-family:inherit; }
+.bom-add-result:hover { background:var(--bg2); }
+.bom-add-result-price { font-size:.68rem; color:var(--muted); white-space:nowrap; }
+.bom-add-fields { display:grid; grid-template-columns:2fr 1.5fr 2fr; gap:.3rem; }
+.bom-add-field { padding:.35rem .5rem; border:1px solid var(--border); border-radius:6px; background:var(--bg); color:var(--text); font-size:.75rem; outline:none; width:100%; box-sizing:border-box; font-family:inherit; }
+.bom-add-field:focus { border-color:var(--gold); }
+.bom-add-actions { display:flex; gap:.4rem; justify-content:flex-end; }
+.bom-add-confirm { padding:.3rem .75rem; background:var(--gold); color:#111; border:none; border-radius:6px; font-size:.72rem; font-weight:700; cursor:pointer; font-family:inherit; }
+.bom-add-confirm:hover { background:var(--gold-h); }
+.bom-add-cancel { padding:.3rem .6rem; background:none; color:var(--muted); border:1px solid var(--border); border-radius:6px; font-size:.72rem; cursor:pointer; font-family:inherit; }
+.bom-add-cancel:hover { background:var(--bg3); }
+.bom-add-err { font-size:.68rem; color:#dc2626; margin:0; }
 /* ── Remove BOM reason modal ── */
 .rm-bom-field { display:flex; flex-direction:column; gap:.4rem; }
 .rm-bom-field label { font-size:.8rem; font-weight:600; color:var(--text); }
@@ -325,6 +345,9 @@
 .complete-btn { width:100%; padding:.75rem; border-radius:8px; background:var(--gold); color:#111827; font-size:.88rem; font-weight:800; letter-spacing:.04em; border:none; cursor:pointer; transition:background .15s; display:flex; align-items:center; justify-content:center; gap:.4rem; font-family:inherit; margin-top:.75rem; }
 .complete-btn:hover { background:var(--gold-h); }
 .complete-btn:disabled { opacity:.55; cursor:not-allowed; }
+.clear-cart-btn { padding:.75rem 1rem; border-radius:8px; background:var(--bg2); color:var(--text3); font-size:.88rem; font-weight:700; border:1.5px solid var(--border); cursor:pointer; transition:all .15s; font-family:inherit; flex-shrink:0; }
+.clear-cart-btn:hover { background:#fef2f2; color:#dc2626; border-color:#fca5a5; }
+.dark .clear-cart-btn:hover { background:#450a0a; color:#f87171; border-color:#7f1d1d; }
 .btn-loading { display:flex; align-items:center; gap:.4rem; }
 
 /* ── Modal ── */
@@ -743,7 +766,7 @@
                     </div>
 
                     {{-- BOM breakdown --}}
-                    @if(!empty($item['bom']) || !empty($item['bom_removals']))
+                    @if(!empty($item['bom']) || !empty($item['bom_removals']) || ($item['production_type'] ?? '') === 'production')
                     <div class="ci-bom">
                         @foreach($item['bom'] as $bi => $bline)
                         <div class="ci-bom-row">
@@ -770,6 +793,55 @@
                             <span class="ci-bom-removed-meta">— {{ $removal['removed_by'] }}, {{ $removal['removed_at'] }}</span>
                         </div>
                         @endforeach
+
+                        {{-- Add material inline --}}
+                        @if($addBomItemIndex === $i)
+                        <div class="ci-bom-add-form">
+                            <div class="bom-add-search">
+                                <input wire:model.live="addBomSearch"
+                                       type="text"
+                                       class="bom-add-input"
+                                       placeholder="Search or type material name…"
+                                       autocomplete="off">
+                                @if(count($addBomResults) > 0)
+                                <div class="bom-add-dropdown">
+                                    @foreach($addBomResults as $r)
+                                    <button type="button"
+                                            wire:click="selectBomResult({{ $r['id'] }})"
+                                            class="bom-add-result">
+                                        <span>{{ $r['name'] }}</span>
+                                        @if($r['unit_price'] > 0)
+                                        <span class="bom-add-result-price">₦{{ number_format($r['unit_price'], 0) }}{{ $r['unit'] ? '/'.$r['unit'] : '' }}</span>
+                                        @endif
+                                    </button>
+                                    @endforeach
+                                </div>
+                                @endif
+                                @error('addBomSearch')<p class="bom-add-err">{{ $message }}</p>@enderror
+                            </div>
+                            <div class="bom-add-fields">
+                                <input wire:model="addBomQty"
+                                       type="number" min="0.001" step="0.001"
+                                       class="bom-add-field" placeholder="Qty">
+                                <input wire:model="addBomUnit"
+                                       type="text"
+                                       class="bom-add-field" placeholder="Unit">
+                                <input wire:model="addBomUnitPrice"
+                                       type="number" min="0" step="0.01"
+                                       class="bom-add-field" placeholder="₦ Price">
+                            </div>
+                            @error('addBomQty')<p class="bom-add-err">{{ $message }}</p>@enderror
+                            @error('addBomUnitPrice')<p class="bom-add-err">{{ $message }}</p>@enderror
+                            <div class="bom-add-actions">
+                                <button type="button" wire:click="cancelAddBom" class="bom-add-cancel">Cancel</button>
+                                <button type="button" wire:click="confirmAddBomLine" class="bom-add-confirm">+ Add</button>
+                            </div>
+                        </div>
+                        @else
+                        <button type="button" wire:click="toggleAddBom({{ $i }})" class="ci-bom-add-btn">
+                            + Add material
+                        </button>
+                        @endif
                     </div>
                     @endif
                 </div>
@@ -839,9 +911,17 @@
                 <span class="total-lbl">TOTAL</span>
                 <span class="total-amt">₦{{ number_format($this->getTotal(),0) }}</span>
             </div>
-            <button wire:click="processOrder" class="complete-btn" style="margin-top:.75rem;">
-                Process →
-            </button>
+            <div style="display:flex;gap:.5rem;margin-top:.75rem;">
+                <button wire:click="clearCart"
+                        wire:confirm="Clear the entire cart and start over?"
+                        class="clear-cart-btn"
+                        title="Clear cart">
+                    🗑
+                </button>
+                <button wire:click="processOrder" class="complete-btn" style="margin-top:0;flex:1;">
+                    Process →
+                </button>
+            </div>
         </div>
 
         @else
@@ -1422,6 +1502,43 @@
             @endforeach
             @else
             <p class="modal-desc" style="margin-bottom:.75rem;">No BOM defined for this product.</p>
+            @endif
+
+            {{-- Add material to modal BOM --}}
+            @if($modalAddBomOpen)
+            <div class="bom-add-form" style="margin-top:.5rem;">
+                <div class="bom-add-search">
+                    <input wire:model.live="modalAddBomSearch" type="text"
+                        placeholder="Search materials…" class="bom-add-input" autocomplete="off">
+                    @if(count($modalAddBomResults))
+                    <div class="bom-add-dropdown">
+                        @foreach($modalAddBomResults as $r)
+                        <button type="button" wire:click="selectModalBomResult({{ $r['id'] }})" class="bom-add-result">
+                            <span>{{ $r['name'] }}</span>
+                            <span class="bom-add-result-price">{{ $r['unit'] ? $r['unit'].' · ' : '' }}₦{{ number_format($r['price'],0) }}</span>
+                        </button>
+                        @endforeach
+                    </div>
+                    @endif
+                </div>
+                <div class="bom-add-fields">
+                    <input wire:model.live="modalAddBomQty" type="number" step="0.01" min="0"
+                        placeholder="Qty" class="bom-add-field">
+                    <input wire:model.live="modalAddBomUnit" type="text"
+                        placeholder="Unit" class="bom-add-field">
+                    <input wire:model.live="modalAddBomUnitPrice" type="number" step="0.01" min="0"
+                        placeholder="Unit price ₦" class="bom-add-field">
+                </div>
+                @error('modalAddBomSearch')<p class="bom-add-err">{{ $message }}</p>@enderror
+                @error('modalAddBomQty')<p class="bom-add-err">{{ $message }}</p>@enderror
+                @error('modalAddBomUnitPrice')<p class="bom-add-err">{{ $message }}</p>@enderror
+                <div class="bom-add-actions">
+                    <button type="button" wire:click="cancelModalAddBom" class="bom-add-cancel">Cancel</button>
+                    <button type="button" wire:click="confirmModalAddBomLine" class="bom-add-confirm">+ Add</button>
+                </div>
+            </div>
+            @else
+            <button type="button" wire:click="toggleModalAddBom" class="ci-bom-add-btn" style="margin-top:.4rem;">+ Add material</button>
             @endif
 
             <div class="wash-section">
