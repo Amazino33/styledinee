@@ -65,6 +65,9 @@ class AdminSettings extends Page
     // ── Credit settings ─────────────────────────────────────────────────────────
     public bool $credit_auto_apply = true;
 
+    // ── POS settings ────────────────────────────────────────────────────────────
+    public string $bom_mode = 'full';
+
     public function mount(): void
     {
         // Payment
@@ -104,6 +107,9 @@ class AdminSettings extends Page
 
         // Credit
         $this->credit_auto_apply = AppSetting::bool('credit_auto_apply', true);
+
+        // POS
+        $this->bom_mode = AppSetting::get('bom_mode', 'full');
     }
 
     public function savePayment(): void
@@ -191,5 +197,16 @@ class AdminSettings extends Page
         AppSetting::set('credit_auto_apply', $this->credit_auto_apply ? '1' : '0');
 
         Notification::make()->title('Referral & Affiliate settings saved.')->success()->send();
+    }
+
+    public function savePos(): void
+    {
+        $this->validate([
+            'bom_mode' => ['required', 'in:full,remove_only,view_only,disabled'],
+        ]);
+
+        AppSetting::set('bom_mode', $this->bom_mode);
+
+        Notification::make()->title('POS settings saved.')->success()->send();
     }
 }

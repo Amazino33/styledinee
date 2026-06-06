@@ -127,6 +127,9 @@
     <button class="s-tab {{ $tab === 'referral'  ? 'active' : '' }}" wire:click="$set('tab','referral')">
         🤝 Referral & Affiliate
     </button>
+    <button class="s-tab {{ $tab === 'pos' ? 'active' : '' }}" wire:click="$set('tab','pos')">
+        🧵 POS
+    </button>
 </div>
 
 {{-- ══════════ PAYMENT TAB ══════════ --}}
@@ -506,6 +509,69 @@
     <button class="s-btn s-btn-primary" wire:click="saveReferral" wire:loading.attr="disabled">
         <span wire:loading.remove wire:target="saveReferral">Save Referral & Affiliate Settings</span>
         <span wire:loading wire:target="saveReferral">Saving…</span>
+    </button>
+</div>
+
+@endif
+
+{{-- ══════════ POS TAB ══════════ --}}
+@if($tab === 'pos')
+
+<div class="s-card">
+    <div class="s-card-title">Bill of Materials (BOM)</div>
+    <div class="s-card-desc">
+        Control how BOM is displayed and managed during the POS order flow.
+        This applies to both the product-adding modal and the cart sidebar.
+    </div>
+
+    <div class="s-options" style="grid-template-columns:repeat(2,1fr);">
+        <label class="s-option {{ $bom_mode === 'full' ? 'selected' : '' }}">
+            <input type="radio" wire:model.live="bom_mode" value="full">
+            <div class="s-option-title">
+                <span class="s-check"></span>
+                🧵 Full BOM
+            </div>
+            <div class="s-option-desc">
+                Cashiers see all materials, can add new lines, adjust quantities, and record removals with reasons.
+            </div>
+        </label>
+        <label class="s-option {{ $bom_mode === 'remove_only' ? 'selected' : '' }}">
+            <input type="radio" wire:model.live="bom_mode" value="remove_only">
+            <div class="s-option-title">
+                <span class="s-check"></span>
+                ✂️ Remove Only
+            </div>
+            <div class="s-option-desc">
+                Cashiers can remove materials (with reason) but cannot add new lines to the BOM.
+            </div>
+        </label>
+        <label class="s-option {{ $bom_mode === 'view_only' ? 'selected' : '' }}">
+            <input type="radio" wire:model.live="bom_mode" value="view_only">
+            <div class="s-option-title">
+                <span class="s-check"></span>
+                👁 View Only
+            </div>
+            <div class="s-option-desc">
+                BOM is shown for reference but cashiers cannot add or remove materials.
+            </div>
+        </label>
+        <label class="s-option {{ $bom_mode === 'disabled' ? 'selected' : '' }}">
+            <input type="radio" wire:model.live="bom_mode" value="disabled">
+            <div class="s-option-title">
+                <span class="s-check"></span>
+                🚫 Hidden
+            </div>
+            <div class="s-option-desc">
+                BOM is completely hidden from the POS. Cashiers only see items and prices.
+            </div>
+        </label>
+    </div>
+</div>
+
+<div class="s-btn-row">
+    <button class="s-btn s-btn-primary" wire:click="savePos" wire:loading.attr="disabled">
+        <span wire:loading.remove wire:target="savePos">Save POS Settings</span>
+        <span wire:loading wire:target="savePos">Saving…</span>
     </button>
 </div>
 

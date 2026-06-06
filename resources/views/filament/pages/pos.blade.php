@@ -476,6 +476,32 @@
 .rc-notes  { font-size:.72rem; color:var(--muted); font-style:italic; margin-bottom:.6rem; }
 .rc-footer { text-align:center; font-size:.7rem; color:var(--muted); line-height:2; }
 
+/* ── BOM toggle chip ── */
+.ci-bom-toggle {
+    width:100%; margin-top:.3rem; padding:.22rem .4rem;
+    background:none; border:none; cursor:pointer; font-family:inherit;
+    display:flex; align-items:center; gap:.4rem; font-size:.7rem; color:var(--text3);
+    text-align:left; border-radius:4px; transition:background .1s;
+}
+.ci-bom-toggle:hover { background:var(--bg3); }
+.ci-bom-toggle-cost { margin-left:auto; font-weight:600; color:var(--gold); font-size:.68rem; flex-shrink:0; }
+.ci-bom-toggle-arrow { color:var(--muted); font-size:.6rem; flex-shrink:0; }
+.ci-bom-removed-chip { font-size:.6rem; font-weight:700; color:#dc2626; background:rgba(220,38,38,.08); padding:.1rem .3rem; border-radius:3px; flex-shrink:0; }
+
+/* ── Order details section separator ── */
+.cart-meta-sep { height:1px; background:var(--border); margin:.65rem 0 .7rem; }
+
+/* ── Delivery type buttons ── */
+.dtype-wrap { display:flex; gap:.5rem; margin-bottom:.5rem; }
+.dtype-btn {
+    flex:1; padding:.45rem; border-radius:.4rem; font-size:.8rem; font-weight:600;
+    cursor:pointer; font-family:inherit;
+    border:2px solid var(--border2); background:var(--bg2); color:var(--text3);
+    transition:all .15s;
+}
+.dtype-btn.active { border-color:var(--gold); background:#fef9ee; color:#92740a; }
+.dark .dtype-btn.active { background:rgba(201,168,76,.1); color:var(--gold); }
+
 /* ── Spinner ── */
 .pos-spin { width:1rem; height:1rem; border:2px solid rgba(17,24,39,.3); border-top-color:#111827; border-radius:50%; animation:spin .6s linear infinite; }
 .dark .pos-spin { border-color:rgba(249,250,251,.3); border-top-color:#f9fafb; }
@@ -579,6 +605,7 @@
 
 @else
 {{-- ═══════════════ MAIN POS ═══════════════ --}}
+@php $bomMode = \App\Models\AppSetting::get('bom_mode', 'full'); @endphp
 <div class="pos-shell">
 
     {{-- ── LEFT: Product Grid ── --}}
@@ -765,83 +792,102 @@
                         <div class="ci-price">₦{{ number_format((float)($item['subtotal']??0),0) }}</div>
                     </div>
 
-                    {{-- BOM breakdown --}}
-                    @if(!empty($item['bom']) || !empty($item['bom_removals']) || ($item['production_type'] ?? '') === 'production')
-                    <div class="ci-bom">
-                        @foreach($item['bom'] as $bi => $bline)
-                        <div class="ci-bom-row">
-                            <span class="ci-bom-name">{{ $bline['name'] }}
-                                <span class="ci-bom-qty">× {{ $bline['quantity'] }}{{ $bline['unit'] ? ' '.$bline['unit'] : '' }}</span>
-                            </span>
-                            <span class="ci-bom-price">
-                                @if($bline['line_total'] > 0)₦{{ number_format($bline['line_total'], 0) }}@else—@endif
-                            </span>
-                            <button type="button"
-                                wire:click="openRemoveBomModal({{ $i }}, {{ $bi }})"
-                                class="ci-bom-rm" title="Remove material">✕</button>
-                        </div>
-                        @endforeach
-                        @php $bomTotal = collect($item['bom'])->sum('line_total'); @endphp
-                        @if($bomTotal > 0)
-                        <div class="ci-bom-total">Material cost: ₦{{ number_format($bomTotal, 0) }}</div>
-                        @endif
-                        @foreach($item['bom_removals'] ?? [] as $removal)
-                        <div class="ci-bom-removed">
-                            <span class="ci-bom-removed-label">⊗ Removed:</span>
-                            <span class="ci-bom-removed-name">{{ $removal['name'] }} × {{ $removal['quantity'] }}{{ $removal['unit'] ? ' '.$removal['unit'] : '' }}</span>
-                            <span class="ci-bom-removed-reason">Reason: {{ $removal['reason'] }}</span>
-                            <span class="ci-bom-removed-meta">— {{ $removal['removed_by'] }}, {{ $removal['removed_at'] }}</span>
-                        </div>
-                        @endforeach
-
-                        {{-- Add material inline --}}
-                        @if($addBomItemIndex === $i)
-                        <div class="ci-bom-add-form">
-                            <div class="bom-add-search">
-                                <input wire:model.live="addBomSearch"
-                                       type="text"
-                                       class="bom-add-input"
-                                       placeholder="Search or type material name…"
-                                       autocomplete="off">
-                                @if(count($addBomResults) > 0)
-                                <div class="bom-add-dropdown">
-                                    @foreach($addBomResults as $r)
-                                    <button type="button"
-                                            wire:click="selectBomResult({{ $r['id'] }})"
-                                            class="bom-add-result">
-                                        <span>{{ $r['name'] }}</span>
-                                        @if($r['unit_price'] > 0)
-                                        <span class="bom-add-result-price">₦{{ number_format($r['unit_price'], 0) }}{{ $r['unit'] ? '/'.$r['unit'] : '' }}</span>
-                                        @endif
-                                    </button>
-                                    @endforeach
-                                </div>
-                                @endif
-                                @error('addBomSearch')<p class="bom-add-err">{{ $message }}</p>@enderror
-                            </div>
-                            <div class="bom-add-fields">
-                                <input wire:model="addBomQty"
-                                       type="number" min="0.001" step="0.001"
-                                       class="bom-add-field" placeholder="Qty">
-                                <input wire:model="addBomUnit"
-                                       type="text"
-                                       class="bom-add-field" placeholder="Unit">
-                                <input wire:model="addBomUnitPrice"
-                                       type="number" min="0" step="0.01"
-                                       class="bom-add-field" placeholder="₦ Price">
-                            </div>
-                            @error('addBomQty')<p class="bom-add-err">{{ $message }}</p>@enderror
-                            @error('addBomUnitPrice')<p class="bom-add-err">{{ $message }}</p>@enderror
-                            <div class="bom-add-actions">
-                                <button type="button" wire:click="cancelAddBom" class="bom-add-cancel">Cancel</button>
-                                <button type="button" wire:click="confirmAddBomLine" class="bom-add-confirm">+ Add</button>
-                            </div>
-                        </div>
-                        @else
-                        <button type="button" wire:click="toggleAddBom({{ $i }})" class="ci-bom-add-btn">
-                            + Add material
+                    {{-- BOM breakdown (collapsible) --}}
+                    @if($bomMode !== 'disabled' && (!empty($item['bom']) || !empty($item['bom_removals']) || ($item['production_type'] ?? '') === 'production'))
+                    @php
+                        $bomCount  = count($item['bom'] ?? []);
+                        $remCount  = count($item['bom_removals'] ?? []);
+                        $bomTotal  = collect($item['bom'] ?? [])->sum('line_total');
+                        $bomInitOpen = ($addBomItemIndex === $i) ? 'true' : 'false';
+                    @endphp
+                    <div x-data="{ open: {{ $bomInitOpen }} }">
+                        {{-- Toggle chip --}}
+                        <button type="button" @click="open = !open" class="ci-bom-toggle">
+                            <span>{{ $bomCount > 0 ? $bomCount.' material'.($bomCount>1?'s':'') : 'Materials' }}</span>
+                            @if($remCount > 0)<span class="ci-bom-removed-chip">{{ $remCount }} removed</span>@endif
+                            @if($bomTotal > 0)<span class="ci-bom-toggle-cost">₦{{ number_format($bomTotal,0) }}</span>@endif
+                            <span x-text="open ? '▲' : '▼'" class="ci-bom-toggle-arrow"></span>
                         </button>
-                        @endif
+                        {{-- Expanded content --}}
+                        <div x-show="open" x-transition.duration.150ms class="ci-bom">
+                            @foreach($item['bom'] as $bi => $bline)
+                            <div class="ci-bom-row">
+                                <span class="ci-bom-name">{{ $bline['name'] }}
+                                    <span class="ci-bom-qty">× {{ $bline['quantity'] }}{{ $bline['unit'] ? ' '.$bline['unit'] : '' }}</span>
+                                </span>
+                                <span class="ci-bom-price">
+                                    @if($bline['line_total'] > 0)₦{{ number_format($bline['line_total'], 0) }}@else—@endif
+                                </span>
+                                @if($bomMode === 'full' || $bomMode === 'remove_only')
+                                <button type="button"
+                                    wire:click="openRemoveBomModal({{ $i }}, {{ $bi }})"
+                                    class="ci-bom-rm" title="Remove material">✕</button>
+                                @endif
+                            </div>
+                            @endforeach
+                            @if($bomTotal > 0)
+                            <div class="ci-bom-total">Material cost: ₦{{ number_format($bomTotal, 0) }}</div>
+                            @endif
+                            @foreach($item['bom_removals'] ?? [] as $removal)
+                            <div class="ci-bom-removed">
+                                <span class="ci-bom-removed-label">⊗ Removed:</span>
+                                <span class="ci-bom-removed-name">{{ $removal['name'] }} × {{ $removal['quantity'] }}{{ $removal['unit'] ? ' '.$removal['unit'] : '' }}</span>
+                                <span class="ci-bom-removed-reason">Reason: {{ $removal['reason'] }}</span>
+                                <span class="ci-bom-removed-meta">— {{ $removal['removed_by'] }}, {{ $removal['removed_at'] }}</span>
+                            </div>
+                            @endforeach
+
+                            {{-- Add material inline --}}
+                            @if($bomMode === 'full')
+                            @if($addBomItemIndex === $i)
+                            <div class="ci-bom-add-form">
+                                <div class="bom-add-search">
+                                    <input wire:model.live="addBomSearch"
+                                           type="text"
+                                           class="bom-add-input"
+                                           placeholder="Search or type material name…"
+                                           autocomplete="off">
+                                    @if(count($addBomResults) > 0)
+                                    <div class="bom-add-dropdown">
+                                        @foreach($addBomResults as $r)
+                                        <button type="button"
+                                                wire:click="selectBomResult({{ $r['id'] }})"
+                                                class="bom-add-result">
+                                            <span>{{ $r['name'] }}</span>
+                                            @if($r['unit_price'] > 0)
+                                            <span class="bom-add-result-price">₦{{ number_format($r['unit_price'], 0) }}{{ $r['unit'] ? '/'.$r['unit'] : '' }}</span>
+                                            @endif
+                                        </button>
+                                        @endforeach
+                                    </div>
+                                    @endif
+                                    @error('addBomSearch')<p class="bom-add-err">{{ $message }}</p>@enderror
+                                </div>
+                                <div class="bom-add-fields">
+                                    <input wire:model="addBomQty"
+                                           type="number" min="0.001" step="0.001"
+                                           class="bom-add-field" placeholder="Qty">
+                                    <input wire:model="addBomUnit"
+                                           type="text"
+                                           class="bom-add-field" placeholder="Unit">
+                                    <input wire:model="addBomUnitPrice"
+                                           type="number" min="0" step="0.01"
+                                           class="bom-add-field" placeholder="₦ Price">
+                                </div>
+                                @error('addBomQty')<p class="bom-add-err">{{ $message }}</p>@enderror
+                                @error('addBomUnitPrice')<p class="bom-add-err">{{ $message }}</p>@enderror
+                                <div class="bom-add-actions">
+                                    <button type="button" wire:click="cancelAddBom" class="bom-add-cancel">Cancel</button>
+                                    <button type="button" wire:click="confirmAddBomLine" class="bom-add-confirm">+ Add</button>
+                                </div>
+                            </div>
+                            @else
+                            <button type="button" wire:click="toggleAddBom({{ $i }})" class="ci-bom-add-btn">
+                                + Add material
+                            </button>
+                            @endif
+                            @endif {{-- bomMode === 'full' --}}
+                        </div>
                     </div>
                     @endif
                 </div>
@@ -861,6 +907,9 @@
             @endforeach
 
             <button wire:click="addItem" class="add-row-btn">+ Add Line</button>
+
+            <div class="cart-meta-sep"></div>
+            <span class="plbl">Order Details</span>
 
             {{-- Customer strip --}}
             @if($customerName)
@@ -883,13 +932,11 @@
             @endif
 
             {{-- Delivery / Pickup toggle --}}
-            <div style="display:flex;gap:.5rem;margin-bottom:.5rem;">
-                <button wire:click="$set('deliveryType','pickup')"
-                    style="flex:1;padding:.45rem;border-radius:.4rem;font-size:.8rem;font-weight:600;cursor:pointer;border:2px solid {{ $deliveryType==='pickup'?'#c9a84c':'#d1d5db' }};background:{{ $deliveryType==='pickup'?'#fef9ee':'#f9fafb' }};color:{{ $deliveryType==='pickup'?'#92740a':'#6b7280' }};">
+            <div class="dtype-wrap">
+                <button wire:click="$set('deliveryType','pickup')" class="dtype-btn {{ $deliveryType==='pickup'?'active':'' }}">
                     🏪 Walk-in Pickup
                 </button>
-                <button wire:click="$set('deliveryType','delivery')"
-                    style="flex:1;padding:.45rem;border-radius:.4rem;font-size:.8rem;font-weight:600;cursor:pointer;border:2px solid {{ $deliveryType==='delivery'?'#c9a84c':'#d1d5db' }};background:{{ $deliveryType==='delivery'?'#fef9ee':'#f9fafb' }};color:{{ $deliveryType==='delivery'?'#92740a':'#6b7280' }};">
+                <button wire:click="$set('deliveryType','delivery')" class="dtype-btn {{ $deliveryType==='delivery'?'active':'' }}">
                     🚚 Home Delivery
                 </button>
             </div>
@@ -966,12 +1013,27 @@
             {{-- Customer quick-view --}}
             <div class="cust-qv">
                 <span style="font-size:1rem;">👤</span>
-                <span><strong>{{ $customerName }}</strong> · {{ $customerPhone }}</span>
+                <span><strong>{{ $customerName }}</strong>@if($customerPhone) · {{ $customerPhone }}@endif</span>
             </div>
             @if($estimatedCompletionDate)
             <div class="cust-qv" style="margin-top:-.5rem;">
                 <span style="font-size:1rem;">📅</span>
                 <span>Ready by <strong>{{ \Carbon\Carbon::parse($estimatedCompletionDate)->format('D, d M Y') }}</strong></span>
+            </div>
+            @endif
+
+            {{-- Quick amounts (in scroll area, not footer) --}}
+            @php $remaining = $this->getBalance(); $total = $this->getTotal(); @endphp
+            @if($total > 0 && $remaining > 0)
+            @php $shown = 0; @endphp
+            <div class="quick-amts" style="margin-top:.5rem;padding-bottom:.5rem;">
+                <button wire:click="fillRemaining({{ count($splits)-1 }})" class="q-btn">Exact</button>
+                @foreach([500,1000,2000,5000,10000,20000,50000,100000,200000,500000] as $q)
+                    @if($q > $this->getSplitTotal() && $shown < 2)
+                    <button wire:click="$set('splits.{{ count($splits)-1 }}.amount','{{ $q }}')" class="q-btn">₦{{ number_format($q,0) }}</button>
+                    @php $shown++ @endphp
+                    @endif
+                @endforeach
             </div>
             @endif
 
@@ -1026,21 +1088,6 @@
                 style="width:100%;padding:.35rem;border:1px dashed var(--border);border-radius:6px;background:transparent;cursor:pointer;font-size:.75rem;color:var(--text3);margin-bottom:.5rem;">
                 + Add another payment method
             </button>
-            @endif
-
-            {{-- Quick amounts (based on remaining balance) --}}
-            @php $remaining = $this->getBalance(); $total = $this->getTotal(); @endphp
-            @if($total > 0 && $remaining > 0)
-            @php $shown = 0; @endphp
-            <div class="quick-amts">
-                <button wire:click="fillRemaining({{ count($splits)-1 }})" class="q-btn">Exact</button>
-                @foreach([500,1000,2000,5000,10000,20000,50000,100000,200000,500000] as $q)
-                    @if($q > $this->getSplitTotal() && $shown < 2)
-                    <button wire:click="$set('splits.{{ count($splits)-1 }}.amount','{{ $q }}')" class="q-btn">₦{{ number_format($q,0) }}</button>
-                    @php $shown++ @endphp
-                    @endif
-                @endforeach
-            </div>
             @endif
 
             {{-- Summary / change --}}
@@ -1461,23 +1508,30 @@
 
             {{-- STEP 4: Confirm --}}
             @if ($modalStep === 4)
-            <p class="modal-desc">Review the BOM and washing requirements before adding to cart.</p>
+            <p class="modal-desc">
+                @if($bomMode !== 'disabled')Review materials and washing requirements before adding to cart.
+                @else Review washing requirements before adding to cart.
+                @endif
+            </p>
 
+            @if($bomMode !== 'disabled')
             @if(count($modalBom) > 0 || count($modalBomRemovals) > 0)
             <span class="plbl" style="margin-bottom:.4rem; display:block;">Materials Needed (BOM)</span>
             @foreach($modalBom as $bi => $bm)
             <div class="bom-item {{ ($showModalBomRemove && $modalBomRemoveIndex === $bi) ? 'bom-item--pending' : '' }}">
                 <span class="bom-name">{{ $bm['name'] }}</span>
                 <input wire:model.live="modalBom.{{ $bi }}.quantity" type="number" step="0.1" min="0" class="bom-qty-input"
-                    {{ ($showModalBomRemove && $modalBomRemoveIndex === $bi) ? 'disabled' : '' }}>
+                    {{ (($bomMode !== 'full' && $bomMode !== 'remove_only') || ($showModalBomRemove && $modalBomRemoveIndex === $bi)) ? 'disabled' : '' }}>
                 <span class="bom-unit">{{ $bm['unit'] }}</span>
+                @if($bomMode === 'full' || $bomMode === 'remove_only')
                 <button type="button" wire:click="openModalBomRemove({{ $bi }})"
                     class="bom-rm-btn" title="Remove material">✕</button>
+                @endif
             </div>
             @endforeach
 
-            {{-- Inline reason form --}}
-            @if($showModalBomRemove && isset($modalBom[$modalBomRemoveIndex]))
+            {{-- Inline reason form (full mode only) --}}
+            @if(($bomMode === 'full' || $bomMode === 'remove_only') && $showModalBomRemove && isset($modalBom[$modalBomRemoveIndex]))
             @php $pendingBm = $modalBom[$modalBomRemoveIndex]; @endphp
             <div class="bom-remove-inline">
                 <p class="bom-remove-inline-title">Removing <strong>{{ $pendingBm['name'] }}</strong> — enter a reason:</p>
@@ -1504,7 +1558,8 @@
             <p class="modal-desc" style="margin-bottom:.75rem;">No BOM defined for this product.</p>
             @endif
 
-            {{-- Add material to modal BOM --}}
+            {{-- Add material to modal BOM (full mode only) --}}
+            @if($bomMode === 'full')
             @if($modalAddBomOpen)
             <div class="bom-add-form" style="margin-top:.5rem;">
                 <div class="bom-add-search">
@@ -1540,6 +1595,8 @@
             @else
             <button type="button" wire:click="toggleModalAddBom" class="ci-bom-add-btn" style="margin-top:.4rem;">+ Add material</button>
             @endif
+            @endif {{-- bomMode === 'full' --}}
+            @endif {{-- bomMode !== 'disabled' --}}
 
             <div class="wash-section">
                 <label class="wash-lbl">
