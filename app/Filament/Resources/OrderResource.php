@@ -30,32 +30,6 @@ class OrderResource extends Resource
     public static function getNavigationIcon(): string { return 'heroicon-o-clipboard-document-list'; }
     public static function getNavigationGroup(): ?string { return 'Orders'; }
 
-    public static function canAccess(): bool
-    {
-        return auth()->user()?->hasAnyRole(['admin', 'cashier']);
-    }
-
-    public static function canCreate(): bool
-    {
-        return auth()->user()?->hasAnyRole(['admin', 'cashier']);
-    }
-
-    public static function canEdit($record): bool
-    {
-        $user = auth()->user();
-        if ($user->hasRole('admin')) return true;
-        if ($user->hasRole('cashier')) return true;
-        if ($user->hasRole('tailor') && in_array($record->type, ['tailoring', 'alteration'])) return true;
-        if ($user->hasRole('dry_cleaner') && $record->type === 'dry_cleaning') return true;
-        if ($user->hasRole('delivery') && $record->type === 'pickup_delivery') return true;
-        return false;
-    }
-
-    public static function canDelete($record): bool
-    {
-        return auth()->user()?->hasRole('admin');
-    }
-
     public static function form(Schema $schema): Schema
     {
         $user = auth()->user();

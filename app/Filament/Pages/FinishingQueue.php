@@ -22,7 +22,7 @@ class FinishingQueue extends Page
 
     public static function canAccess(): bool
     {
-        return auth()->user()?->hasAnyRole(['admin', 'dry_cleaner']);
+        return auth()->user()?->can('View:FinishingQueue') ?? false;
     }
 
     public bool $showDetailsModal    = false;

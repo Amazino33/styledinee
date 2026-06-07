@@ -21,7 +21,7 @@ class TransactionHistory extends Page
 
     public static function canAccess(): bool
     {
-        return auth()->user()?->hasAnyRole(['admin', 'cashier']);
+        return auth()->user()?->can('View:TransactionHistory') ?? false;
     }
 
     public string $search       = '';

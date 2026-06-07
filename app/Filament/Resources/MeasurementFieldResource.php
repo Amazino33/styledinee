@@ -22,11 +22,6 @@ class MeasurementFieldResource extends Resource
     public static function getNavigationIcon(): string { return 'heroicon-o-variable'; }
     public static function getNavigationGroup(): ?string { return 'Catalogue'; }
 
-    public static function canAccess(): bool
-    {
-        return auth()->user()?->hasAnyRole(['admin', 'super_admin']);
-    }
-
     public static function form(Schema $schema): Schema
     {
         return $schema->components([

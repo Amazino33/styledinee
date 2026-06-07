@@ -20,16 +20,6 @@ class OrderStatusLogResource extends Resource
     public static function getNavigationIcon(): string { return 'heroicon-o-clock'; }
     public static function getNavigationGroup(): ?string { return 'Orders'; }
 
-    public static function canAccess(): bool
-    {
-        return auth()->user()?->hasRole('admin');
-    }
-
-    public static function canCreate(): bool
-    {
-        return false;
-    }
-
     public static function form(Schema $schema): Schema
     {
         return $schema->components([

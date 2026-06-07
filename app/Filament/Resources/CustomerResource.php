@@ -19,11 +19,6 @@ class CustomerResource extends Resource
     public static function getNavigationIcon(): string { return 'heroicon-o-users'; }
     public static function getNavigationGroup(): ?string { return 'Customers'; }
 
-    public static function canAccess(): bool
-    {
-        return auth()->user()?->hasAnyRole(['admin', 'cashier']);
-    }
-
     public static function form(Schema $schema): Schema
     {
         return $schema->components([

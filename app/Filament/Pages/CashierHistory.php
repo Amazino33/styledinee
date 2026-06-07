@@ -21,7 +21,7 @@ class CashierHistory extends Page
 
     public static function canAccess(): bool
     {
-        return auth()->user()?->hasAnyRole(['admin', 'cashier']);
+        return auth()->user()?->can('View:CashierHistory') ?? false;
     }
 
     public string $search    = '';

@@ -22,7 +22,7 @@ class DeliveryHistory extends Page
 
     public static function canAccess(): bool
     {
-        return auth()->user()?->hasAnyRole(['admin', 'cashier']);
+        return auth()->user()?->can('View:DeliveryHistory') ?? false;
     }
 
     public string $search     = '';

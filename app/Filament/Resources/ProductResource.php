@@ -33,12 +33,6 @@ class ProductResource extends Resource
     public static function getNavigationIcon(): string { return 'heroicon-o-shopping-bag'; }
     public static function getNavigationGroup(): ?string { return 'Catalogue'; }
 
-    public static function canAccess(): bool
-    {
-        $user = \Illuminate\Support\Facades\Auth::user();
-        return $user instanceof \App\Models\User && $user->hasAnyRole(['admin', 'cashier']);
-    }
-
     public static function form(Schema $schema): Schema
     {
         return $schema->components([

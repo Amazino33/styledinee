@@ -22,7 +22,7 @@ class PrintingQueue extends Page
 
     public static function canAccess(): bool
     {
-        return auth()->user()?->hasAnyRole(['admin', 'printer']);
+        return auth()->user()?->can('View:PrintingQueue') ?? false;
     }
 
     public bool $showDetailsModal    = false;

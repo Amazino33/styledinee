@@ -22,7 +22,7 @@ class DeliveryQueue extends Page
 
     public static function canAccess(): bool
     {
-        return auth()->user()?->hasAnyRole(['admin', 'cashier', 'delivery']);
+        return auth()->user()?->can('View:DeliveryQueue') ?? false;
     }
 
     // â”€â”€ OTP verify state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

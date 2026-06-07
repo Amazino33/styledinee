@@ -34,7 +34,7 @@ class Pos extends Page
 
     public static function canAccess(): bool
     {
-        return auth()->user()?->hasAnyRole(['admin', 'cashier']);
+        return auth()->user()?->can('View:Pos') ?? false;
     }
 
     // â”€â”€ Cart / Order State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

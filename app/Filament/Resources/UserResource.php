@@ -24,18 +24,6 @@ class UserResource extends Resource
     public static function getNavigationIcon(): string { return 'heroicon-o-user-group'; }
     public static function getNavigationGroup(): ?string { return 'Administration'; }
 
-    public static function canAccess(): bool
-    {
-        return auth()->user()?->hasRole('admin');
-    }
-
-    public static function canCreate(): bool { return true; }
-    public static function canEdit($record): bool { return true; }
-    public static function canDelete($record): bool
-    {
-        return $record->id !== auth()->id();
-    }
-
     public static function form(Schema $schema): Schema
     {
         return $schema->components([

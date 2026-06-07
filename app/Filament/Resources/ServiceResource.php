@@ -26,11 +26,6 @@ class ServiceResource extends Resource
     public static function getNavigationIcon(): string { return 'heroicon-o-scissors'; }
     public static function getNavigationGroup(): ?string { return 'Catalogue'; }
 
-    public static function canAccess(): bool
-    {
-        return auth()->user()?->hasAnyRole(['admin', 'cashier']);
-    }
-
     public static function form(Schema $schema): Schema
     {
         return $schema->components([

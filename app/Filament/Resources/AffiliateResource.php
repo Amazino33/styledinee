@@ -32,11 +32,6 @@ class AffiliateResource extends Resource
     public static function getNavigationIcon(): string { return 'heroicon-o-user-plus'; }
     public static function getNavigationGroup(): ?string { return 'Referral & Rewards'; }
 
-    public static function canAccess(): bool
-    {
-        return auth()->user()?->hasRole('admin');
-    }
-
     public static function form(Schema $schema): Schema
     {
         return $schema->components([

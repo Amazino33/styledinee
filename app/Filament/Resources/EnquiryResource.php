@@ -21,21 +21,6 @@ class EnquiryResource extends Resource
     public static function getNavigationIcon(): string { return 'heroicon-o-envelope'; }
     public static function getNavigationGroup(): ?string { return 'Customers'; }
 
-    public static function canAccess(): bool
-    {
-        return auth()->user()?->hasAnyRole(['admin', 'cashier']);
-    }
-
-    public static function canCreate(): bool
-    {
-        return false;
-    }
-
-    public static function canDelete($record): bool
-    {
-        return auth()->user()?->hasRole('admin');
-    }
-
     public static function form(Schema $schema): Schema
     {
         return $schema->components([

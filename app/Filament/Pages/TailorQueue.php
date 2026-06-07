@@ -22,7 +22,7 @@ class TailorQueue extends Page
 
     public static function canAccess(): bool
     {
-        return auth()->user()?->hasAnyRole(['admin', 'tailor']);
+        return auth()->user()?->can('View:TailorQueue') ?? false;
     }
 
     // â”€â”€ Details modal state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

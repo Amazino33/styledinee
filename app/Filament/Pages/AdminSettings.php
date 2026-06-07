@@ -19,8 +19,7 @@ class AdminSettings extends Page
 
     public static function canAccess(): bool
     {
-        $user = auth()->user();
-        return $user instanceof \App\Models\User && $user->hasRole('admin');
+        return auth()->user()?->can('View:AdminSettings') ?? false;
     }
 
     // ── Active tab ──────────────────────────────────────────────────────────────

@@ -22,7 +22,7 @@ class ProductionTracker extends Page
 
     public static function canAccess(): bool
     {
-        return auth()->user()?->hasAnyRole(['admin', 'cashier']);
+        return auth()->user()?->can('View:ProductionTracker') ?? false;
     }
 
     public const STAGE_ROLES = [

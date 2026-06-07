@@ -23,7 +23,7 @@ class EmbroideryQueue extends Page
 
     public static function canAccess(): bool
     {
-        return auth()->user()?->hasAnyRole(['admin', 'embroidery']);
+        return auth()->user()?->can('View:EmbroideryQueue') ?? false;
     }
 
     public bool $showDetailsModal    = false;

@@ -29,9 +29,9 @@ class UserPolicy
         return $authUser->can('Update:User');
     }
 
-    public function delete(AuthUser $authUser): bool
+    public function delete(AuthUser $authUser, AuthUser $user): bool
     {
-        return $authUser->can('Delete:User');
+        return $authUser->can('Delete:User') && $authUser->id !== $user->id;
     }
 
     public function deleteAny(AuthUser $authUser): bool

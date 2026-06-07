@@ -22,9 +22,7 @@ class StaffHistory extends Page
 
     public static function canAccess(): bool
     {
-        return auth()->user()?->hasAnyRole([
-            'admin', 'tailor', 'embroidery', 'printer', 'dry_cleaner', 'delivery',
-        ]);
+        return auth()->user()?->can('View:StaffHistory') ?? false;
     }
 
     public string $search   = '';

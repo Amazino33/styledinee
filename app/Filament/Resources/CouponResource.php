@@ -28,10 +28,6 @@ class CouponResource extends Resource
     public static function getNavigationIcon(): string { return 'heroicon-o-ticket'; }
     public static function getNavigationGroup(): ?string { return 'Referral & Rewards'; }
 
-    public static function canAccess(): bool
-    {
-        return auth()->user()?->hasRole('admin');
-    }
 
     public static function form(Schema $schema): Schema
     {
