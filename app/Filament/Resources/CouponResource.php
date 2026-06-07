@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\CouponResource\Pages;
 use App\Models\Coupon;
 use App\Models\Customer;
+use App\Models\Product;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\DateTimePicker;
@@ -105,6 +106,21 @@ class CouponResource extends Resource
                     Toggle::make('is_active')->label('Active')->default(true)->inline(false),
                 ])->columns(2),
 
+            Section::make('Product Restriction')
+                ->description('Restrict this coupon to specific products. When products are selected, the discount is calculated only on matching cart items. Leave empty to apply to any order.')
+                ->schema([
+                    Select::make('products')
+                        ->relationship('products', 'name')
+                        ->multiple()
+                        ->searchable()
+                        ->preload()
+                        ->columnSpanFull()
+                        ->getOptionLabelFromRecordUsing(fn (Product $record) =>
+                            $record->name . ' — ₦' . number_format($record->price, 0)
+                        )
+                        ->placeholder('All products (no restriction)'),
+                ]),
+
             Section::make('Auto-Apply')
                 ->description('Automatically apply this coupon when a customer qualifies at checkout.')
                 ->schema([
@@ -147,6 +163,15 @@ class CouponResource extends Resource
                         'exclusive'           => 'Exclusive',
                         default               => ucfirst($state),
                     })->badge()->color('info'),
+                Tables\Columns\TextColumn::make('products_count')
+                    ->label('Scope')
+                    ->counts('products')
+                    ->formatStateUsing(fn (int $state) => $state > 0
+                        ? $state . ' product' . ($state > 1 ? 's' : '')
+                        : 'All products'
+                    )
+                    ->badge()
+                    ->color(fn (int $state) => $state > 0 ? 'warning' : 'gray'),
                 Tables\Columns\TextColumn::make('used_count')->label('Used')->sortable(),
                 Tables\Columns\TextColumn::make('usage_limit')
                     ->label('Limit')
@@ -166,6 +191,14 @@ class CouponResource extends Resource
                     ]),
                 Tables\Filters\TernaryFilter::make('is_active')->label('Status')
                     ->trueLabel('Active')->falseLabel('Inactive'),
+                Tables\Filters\TernaryFilter::make('product_specific')
+                    ->label('Scope')
+                    ->trueLabel('Product-specific')
+                    ->falseLabel('Order-wide')
+                    ->queries(
+                        true:  fn ($query) => $query->has('products'),
+                        false: fn ($query) => $query->doesntHave('products'),
+                    ),
             ])
             ->actions([
                 EditAction::make(),

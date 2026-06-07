@@ -756,7 +756,21 @@
 
     {{-- ── RIGHT PANEL ── --}}
     <div class="pos-right">
+        <livewire:pos.order-sidebar
+            :items="$items"
+            :customer-id="$customerId"
+            :customer-name="$customerName"
+            :customer-phone="$customerPhone"
+            :customer-address="$customerAddress"
+            :delivery-type="$deliveryType"
+            :estimated-completion-date="$estimatedCompletionDate"
+            :notes="$notes"
+        />
+    </div>{{-- /pos-right --}}
 
+    {{-- REMOVED old right panel steps (now in OrderSidebar Livewire component) --}}
+    {{-- Keep this comment block to mark where old content was (lines replaced by sidebar) --}}
+    @if(false) {{-- BEGIN old right panel (disabled) --}}
         @if ($posStep === 'order')
         {{-- ════════ STEP 1: ORDER ════════ --}}
 
@@ -1151,7 +1165,7 @@
 
         @endif{{-- posStep --}}
 
-    </div>{{-- /pos-right --}}
+    @endif {{-- END old right panel (disabled) --}}
 
 </div>{{-- /pos-shell --}}
 
@@ -1611,9 +1625,32 @@
                 @endif
             </div>
 
-            <div class="mfield" style="margin-top:.75rem;">
-                <label>Item Notes</label>
-                <input wire:model.live="modalNotes" type="text" placeholder="Special instructions for this item…">
+            {{-- Fulfillment --}}
+            <div class="wash-section">
+                <div class="wash-lbl" style="cursor:default;margin-bottom:.6rem;">Fulfillment</div>
+                <div style="display:flex;gap:6px;">
+                    <button type="button"
+                            wire:click="$set('modalDeliveryType','pickup')"
+                            style="flex:1;padding:7px 4px;border-radius:6px;font-size:.78rem;cursor:pointer;transition:all .15s;
+                                   {{ $modalDeliveryType==='pickup' ? 'background:#1a1a18;color:#fff;border:1px solid #1a1a18;font-weight:500;' : 'background:transparent;color:var(--muted);border:1px solid var(--border);' }}">
+                        Pickup
+                    </button>
+                    <button type="button"
+                            wire:click="setModalDeliveryType('delivery')"
+                            style="flex:1;padding:7px 4px;border-radius:6px;font-size:.78rem;cursor:pointer;transition:all .15s;
+                                   {{ $modalDeliveryType==='delivery' ? 'background:#1a1a18;color:#fff;border:1px solid #1a1a18;font-weight:500;' : 'background:transparent;color:var(--muted);border:1px solid var(--border);' }}">
+                        Home Delivery
+                    </button>
+                </div>
+                @if($modalDeliveryType === 'delivery')
+                <div class="mfield" style="margin-top:.75rem;">
+                    <label>Delivery Address</label>
+                    <input wire:model.live="modalDeliveryAddress"
+                           type="text"
+                           placeholder="Enter delivery address…"
+                           style="width:100%;">
+                </div>
+                @endif
             </div>
             @endif
 

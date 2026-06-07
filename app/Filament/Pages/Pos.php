@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Models\Coupon;
 use App\Models\Customer;
 use App\Models\CustomerMeasurement;
 use App\Models\Order;
@@ -10,12 +11,14 @@ use App\Models\OrderStatusLog;
 use App\Models\Product;
 use App\Models\Service;
 use App\Services\AssignmentService;
+use App\Services\CouponService;
 use App\Services\NotificationService;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Collection as BaseCollection;
 use Illuminate\Support\Str;
+use Livewire\Attributes\On;
 use Livewire\WithFileUploads;
 
 class Pos extends Page
@@ -49,8 +52,12 @@ class Pos extends Page
         ['method' => 'cash', 'amount' => ''],
     ];
 
-    // â”€â”€ POS Step: 'order' | 'payment' â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // â”€â”€ POS Step: 'order' | 'payment' (kept for session compat) â”€â”€â”€â”€â”€
     public string $posStep = 'order';
+
+    // â”€â”€ Coupon data passed in from the sidebar before completeSale() â”€
+    public float  $sidebarCouponDiscount = 0.0;
+    public string $sidebarCouponCode     = '';
 
     // â”€â”€ Customer search (order step) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     public string $customerSearch = '';
@@ -115,6 +122,8 @@ class Pos extends Page
     public string $modalBomRemoveReason = '';
     public bool   $modalWashingRequired = true;
     public string $modalWashingSkipReason = '';
+    public string $modalDeliveryType    = 'pickup';
+    public string $modalDeliveryAddress = '';
     public string $modalNotes         = '';
     public string $modalDesignNotes   = '';
     public        $modalDesignFile    = null; // Livewire TemporaryUploadedFile
@@ -382,6 +391,7 @@ class Pos extends Page
             'measurements'         => [],
             'bom'                  => $bom,
             'bom_removals'         => [],
+            'delivery_type'        => 'pickup',
             'washing_required'     => true,
             'washing_skipped'      => false,
             'washing_skip_reason'  => '',
@@ -688,6 +698,8 @@ class Pos extends Page
         $this->modalAddBomUnitPrice = '';
         $this->modalWashingRequired = true;
         $this->modalWashingSkipReason = '';
+        $this->modalDeliveryType    = 'pickup';
+        $this->modalDeliveryAddress = $this->customerAddress;
         $this->modalNotes           = '';
         $this->modalDesignNotes     = '';
         $this->modalDesignFile      = null;
@@ -779,10 +791,12 @@ class Pos extends Page
         $customer = Customer::find($customerId);
         if (! $customer) return;
 
-        $this->customerName   = $customer->name;
-        $this->customerPhone  = $customer->phone;
-        $this->customerEmail  = $customer->email ?? '';
-        $this->customerSearch = '';
+        $this->customerId      = $customer->id;
+        $this->customerName    = $customer->name;
+        $this->customerPhone   = $customer->phone;
+        $this->customerEmail   = $customer->email ?? '';
+        $this->customerAddress = $customer->address ?? '';
+        $this->customerSearch  = '';
     }
 
     public function getModalCustomers(): \Illuminate\Support\Collection
@@ -805,7 +819,28 @@ class Pos extends Page
         $this->modalCustomerEmail = $customer->email ?? '';
         $this->modalCustomerSearch = '';
 
+        // Pre-fill delivery address from this customer if not already set
+        if (empty(trim($this->modalDeliveryAddress)) && !empty($customer->address)) {
+            $this->modalDeliveryAddress = $customer->address;
+        }
+
         $this->prefillModalMeasurements();
+    }
+
+    public function setModalDeliveryType(string $type): void
+    {
+        $this->modalDeliveryType = $type;
+
+        if ($type === 'delivery' && empty(trim($this->modalDeliveryAddress))) {
+            if (!empty($this->customerAddress)) {
+                $this->modalDeliveryAddress = $this->customerAddress;
+            } elseif ($this->modalCustomerId) {
+                $customer = Customer::find($this->modalCustomerId);
+                if ($customer && !empty($customer->address)) {
+                    $this->modalDeliveryAddress = $customer->address;
+                }
+            }
+        }
     }
 
     private function prefillModalMeasurements(): void
@@ -1008,6 +1043,7 @@ class Pos extends Page
             'washing_required'     => $this->modalWashingRequired,
             'washing_skipped'      => ! $this->modalWashingRequired,
             'washing_skip_reason'  => $this->modalWashingSkipReason,
+            'delivery_type'        => $this->modalDeliveryType,
             '_item_notes'          => $this->modalNotes,
             'design_notes'         => trim($this->modalDesignNotes) ?: null,
             'design_file'          => $designFilePath,
@@ -1028,6 +1064,11 @@ class Pos extends Page
             $this->customerEmail = $this->modalCustomerEmail;
         }
 
+        // Sync delivery address back to order level if delivery was chosen
+        if ($this->modalDeliveryType === 'delivery' && !empty(trim($this->modalDeliveryAddress))) {
+            $this->customerAddress = trim($this->modalDeliveryAddress);
+        }
+
         $this->showProductModal = false;
         $this->modalProductId   = null;
 
@@ -1035,6 +1076,38 @@ class Pos extends Page
     }
 
     // ── Manual Item Management â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    public function setDeliveryType(string $type): void
+    {
+        $this->deliveryType = in_array($type, ['pickup', 'delivery']) ? $type : 'pickup';
+    }
+
+    public function incrementQty(int $index): void
+    {
+        if (! isset($this->items[$index])) return;
+        $items = $this->items;
+        $items[$index]['qty'] = ($items[$index]['qty'] ?? 1) + 1;
+        $price = (float) ($items[$index]['unit_price'] ?? 0);
+        $items[$index]['subtotal'] = round($items[$index]['qty'] * $price, 2);
+        $this->items = $items;
+        $this->autoFillEstimatedDate();
+    }
+
+    public function decrementQty(int $index): void
+    {
+        if (! isset($this->items[$index])) return;
+        $newQty = ($this->items[$index]['qty'] ?? 1) - 1;
+        if ($newQty < 1) {
+            $this->removeItem($index);
+            return;
+        }
+        $items = $this->items;
+        $items[$index]['qty'] = $newQty;
+        $price = (float) ($items[$index]['unit_price'] ?? 0);
+        $items[$index]['subtotal'] = round($newQty * $price, 2);
+        $this->items = $items;
+        $this->autoFillEstimatedDate();
+    }
+
     public function addBlankItem(): void
     {
         $this->items[] = [
@@ -1046,6 +1119,7 @@ class Pos extends Page
             'production_type'     => 'ready_made',
             'production_path_key' => 'none',
             'customer_id'         => null,
+            'delivery_type'       => 'pickup',
             'measurements'        => [],
             'washing_required'    => true,
             'washing_skipped'     => false,
@@ -1072,6 +1146,7 @@ class Pos extends Page
             'product_id'          => null,
             'production_type'     => 'ready_made',
             'production_path_key' => 'none',
+            'delivery_type'       => 'pickup',
             'customer_id'         => null,
             'measurements'        => [],
             'washing_required'    => false,
@@ -1106,6 +1181,120 @@ class Pos extends Page
         }
 
         $this->autoFillEstimatedDate();
+    }
+
+    // â”€â”€ Sidebar event handlers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    #[On('pos-remove-item')]
+    public function handleSidebarRemoveItem(int $index): void
+    {
+        $this->removeItem($index);
+    }
+
+    #[On('pos-increment-qty')]
+    public function handleSidebarIncrementQty(int $index): void
+    {
+        $this->incrementQty($index);
+    }
+
+    #[On('pos-decrement-qty')]
+    public function handleSidebarDecrementQty(int $index): void
+    {
+        $this->decrementQty($index);
+    }
+
+    #[On('pos-clear-cart')]
+    public function handleSidebarClearCart(): void
+    {
+        $this->clearCart();
+    }
+
+    #[On('pos-set-delivery-type')]
+    public function handleSidebarSetDeliveryType(string $type): void
+    {
+        $this->setDeliveryType($type);
+    }
+
+    #[On('pos-set-estimated-date')]
+    public function handleSidebarSetEstimatedDate(string $date): void
+    {
+        $this->estimatedCompletionDate = $date;
+    }
+
+    #[On('pos-set-notes')]
+    public function handleSidebarSetNotes(string $notes): void
+    {
+        $this->notes = $notes;
+    }
+
+    #[On('pos-open-customer-modal')]
+    public function handleSidebarOpenCustomerModal(): void
+    {
+        $this->openCustomerModal();
+    }
+
+    #[On('pos-proceed-payment')]
+    public function handleSidebarProceedPayment(): void
+    {
+        $this->processOrder();
+    }
+
+    #[On('pos-complete-order')]
+    public function handleSidebarCompleteOrder(
+        string $payMode,
+        float  $cashAmt,
+        float  $transferAmt,
+        string $couponCode    = '',
+        float  $couponDiscount = 0.0
+    ): void {
+        $this->sidebarCouponCode     = $couponCode;
+        $this->sidebarCouponDiscount = $couponDiscount;
+
+        $netTotal = max(0, $this->getTotal() - $couponDiscount);
+
+        if ($payMode === 'cash') {
+            $this->splits = [['method' => 'cash', 'amount' => (string) $cashAmt]];
+        } elseif ($payMode === 'transfer') {
+            $this->splits = [['method' => 'transfer', 'amount' => (string) $netTotal]];
+        } else {
+            $this->splits = [];
+            if ($cashAmt > 0) {
+                $this->splits[] = ['method' => 'cash', 'amount' => (string) $cashAmt];
+            }
+            if ($transferAmt > 0) {
+                $this->splits[] = ['method' => 'transfer', 'amount' => (string) $transferAmt];
+            }
+        }
+
+        $this->completeSale();
+    }
+
+    #[On('pos-new-sale')]
+    public function handleSidebarNewSale(): void
+    {
+        $this->newSale();
+    }
+
+    #[On('pos-add-line')]
+    public function handleSidebarAddLine(): void
+    {
+        $this->addBlankItem();
+    }
+
+    #[On('pos-update-item')]
+    public function handleSidebarUpdateItem(int $index, string $field, mixed $value): void
+    {
+        if (! isset($this->items[$index])) return;
+        if (! in_array($field, ['description', 'unit_price', 'delivery_type'])) return;
+
+        $items = $this->items;
+        $items[$index][$field] = $value;
+
+        if ($field === 'unit_price') {
+            $qty = (int) ($items[$index]['qty'] ?? 1);
+            $items[$index]['subtotal'] = round((float) $value * $qty, 2);
+        }
+
+        $this->items = $items;
     }
 
     // â”€â”€ Step Navigation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -1147,6 +1336,7 @@ class Pos extends Page
         }
 
         $this->posStep = 'payment';
+        $this->dispatch('pos-step-payment');
     }
 
     public function backToOrder(): void
@@ -1258,12 +1448,27 @@ class Pos extends Page
     }
 
     // â”€â”€ Complete Sale â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    private function deriveOrderDeliveryType(): string
+    {
+        $types = collect($this->items)
+            ->filter(fn ($i) => !empty(trim($i['description'] ?? '')))
+            ->pluck('delivery_type')
+            ->unique()
+            ->values();
+
+        if ($types->count() === 1) return $types->first() ?? 'pickup';
+        if ($types->count() > 1)  return 'mixed';
+        return 'pickup';
+    }
+
     public function completeSale(): void
     {
         $this->validate();
 
-        $total      = $this->getTotal();
-        $amountPaid = $this->getSplitTotal();
+        $rawTotal       = $this->getTotal();
+        $couponDiscount = max(0.0, $this->sidebarCouponDiscount);
+        $total          = max(0.0, round($rawTotal - $couponDiscount, 2));
+        $amountPaid     = $this->getSplitTotal();
 
         $policy  = \App\Models\AppSetting::get('payment_policy', 'half_upfront');
         $percent = max(1, (int) \App\Models\AppSetting::get('deposit_percent', 50));
@@ -1281,9 +1486,9 @@ class Pos extends Page
         }
 
         $paymentStatus = match (true) {
-            $amountPaid <= 0     => 'unpaid',
-            $amountPaid < $total => 'partial',
-            default              => 'paid',
+            $amountPaid <= 0        => 'unpaid',
+            $amountPaid < $total    => 'partial',
+            default                 => 'paid',
         };
 
         // Customer was already saved in processOrder(); fall back to upsert if somehow missing
@@ -1308,9 +1513,10 @@ class Pos extends Page
             'status'           => 'confirmed',
             'notes'            => $this->notes ?: null,
             'total_amount'     => $total,
+            'coupon_discount'  => $couponDiscount > 0 ? $couponDiscount : 0,
             'amount_paid'      => $amountPaid,
             'payment_status'   => $paymentStatus,
-            'delivery_type'             => $this->deliveryType,
+            'delivery_type'             => $this->deriveOrderDeliveryType(),
             'estimated_completion_date' => $this->estimatedCompletionDate ?: null,
         ]);
 
@@ -1343,6 +1549,7 @@ class Pos extends Page
                 'quantity'            => (int)   ($item['qty']        ?? 1),
                 'unit_price'          => (float) ($item['unit_price'] ?? 0),
                 'subtotal'            => (float) ($item['subtotal']   ?? 0),
+                'delivery_type'       => $item['delivery_type'] ?? 'pickup',
                 'production_type'     => $isProduction ? 'production' : 'ready_made',
                 'production_path'     => $isProduction ? $productionPath : null,
                 'item_stage'          => $isProduction ? $productionPath[0] : 'pending',
@@ -1389,9 +1596,25 @@ class Pos extends Page
             // Notification failure must not block sale completion
         }
 
+        // Apply coupon via service if one was used
+        if ($this->sidebarCouponCode && $couponDiscount > 0) {
+            try {
+                $coupon = Coupon::where('code', $this->sidebarCouponCode)->first();
+                if ($coupon) {
+                    app(CouponService::class)->apply($coupon, $order, $couponDiscount, $customer);
+                }
+            } catch (\Throwable) {
+                // Coupon recording failure must not block sale
+            }
+        }
+
         $this->clearCartSession();
+        $this->sidebarCouponDiscount = 0.0;
+        $this->sidebarCouponCode     = '';
         $this->completedOrderId = $order->id;
         $this->showReceipt = true;
+
+        $this->dispatch('order-sale-done');
 
         Notification::make()
             ->title('Sale completed â€” ' . $order->reference)
@@ -1419,6 +1642,7 @@ class Pos extends Page
         $this->deliveryType = 'pickup';
         $this->posStep       = 'order';
         $this->addBlankItem();
+        $this->dispatch('new-sale-started');
     }
 }
 

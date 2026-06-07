@@ -9,7 +9,7 @@ class OrderItem extends Model
 {
     protected $fillable = [
         'order_id', 'customer_id', 'product_id', 'variant_id', 'service_id', 'description',
-        'quantity', 'unit_price', 'subtotal',
+        'quantity', 'unit_price', 'subtotal', 'delivery_type',
         'production_type', 'item_stage', 'production_path', 'measurements',
         'design_notes', 'design_file', 'production_notes',
         'washing_required', 'washing_skipped', 'washing_skip_reason', 'stage_updated_at',

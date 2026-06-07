@@ -12,11 +12,12 @@ class CouponService
 {
     /**
      * Validate a coupon code for a given order total and optional customer.
+     * Pass $items (each with 'product_id' and 'subtotal') for product-specific discount calculation.
      * Returns an array with 'valid', 'discount', and 'message'.
      */
-    public function validate(string $code, float $orderTotal, ?Customer $customer = null): array
+    public function validate(string $code, float $orderTotal, ?Customer $customer = null, array $items = []): array
     {
-        $coupon = Coupon::where('code', strtoupper($code))->first();
+        $coupon = Coupon::with('products')->where('code', strtoupper($code))->first();
 
         if (! $coupon) {
             return ['valid' => false, 'discount' => 0, 'message' => 'Coupon not found.'];
@@ -50,7 +51,17 @@ class CouponService
             }
         }
 
-        $discount = $coupon->calculateDiscount($orderTotal);
+        $discount = $items
+            ? $coupon->calculateDiscountForItems($items)
+            : $coupon->calculateDiscount($orderTotal);
+
+        if ($discount <= 0 && $coupon->isProductSpecific()) {
+            return [
+                'valid'    => false,
+                'discount' => 0,
+                'message'  => 'This coupon does not apply to any items in your cart.',
+            ];
+        }
 
         return [
             'valid'    => true,
@@ -68,6 +79,7 @@ class CouponService
     {
         $candidates = Coupon::where('auto_apply', true)
             ->where('is_active', true)
+            ->whereDoesntHave('products') // product-specific coupons require manual entry
             ->where(fn ($q) => $q->whereNull('starts_at')->orWhere('starts_at', '<=', now()))
             ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>=', now()))
             ->where(fn ($q) => $q->whereNull('usage_limit')->orWhereColumn('used_count', '<', 'usage_limit'))

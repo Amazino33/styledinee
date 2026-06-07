@@ -40,6 +40,11 @@ class Coupon extends Model
         return $this->belongsToMany(Customer::class, 'coupon_customers');
     }
 
+    public function products(): BelongsToMany
+    {
+        return $this->belongsToMany(Product::class, 'coupon_products');
+    }
+
     public function usages(): HasMany
     {
         return $this->hasMany(CouponUsage::class);
@@ -55,6 +60,37 @@ class Coupon extends Model
         if ($this->usage_limit && $this->used_count >= $this->usage_limit) return false;
 
         return true;
+    }
+
+    public function isProductSpecific(): bool
+    {
+        return $this->relationLoaded('products')
+            ? $this->products->isNotEmpty()
+            : $this->products()->exists();
+    }
+
+    /**
+     * Calculate discount against cart items, respecting product restrictions.
+     * Each item needs 'product_id' and 'subtotal' keys.
+     * Falls back to full order total when no product restriction is set.
+     */
+    public function calculateDiscountForItems(array $items): float
+    {
+        if (! $this->isProductSpecific()) {
+            return $this->calculateDiscount((float) collect($items)->sum('subtotal'));
+        }
+
+        $restrictedIds = $this->products->pluck('id')->all();
+
+        $applicableTotal = (float) collect($items)
+            ->filter(fn ($item) => in_array($item['product_id'] ?? null, $restrictedIds, true))
+            ->sum('subtotal');
+
+        if ($applicableTotal <= 0) {
+            return 0.0;
+        }
+
+        return $this->calculateDiscount($applicableTotal);
     }
 
     /**
