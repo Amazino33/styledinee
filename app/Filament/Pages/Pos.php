@@ -1632,7 +1632,7 @@ class Pos extends Page
         $this->dispatch('order-sale-done');
 
         Notification::make()
-            ->title('Sale completed â€” ' . $order->reference)
+            ->title('Sale completed - ' . $order->reference)
             ->success()
             ->send();
     }
