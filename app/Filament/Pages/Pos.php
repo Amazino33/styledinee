@@ -124,6 +124,7 @@ class Pos extends Page
     public string $modalWashingSkipReason = '';
     public string $modalDeliveryType    = 'pickup';
     public string $modalDeliveryAddress = '';
+    public string $modalDeliveryDate    = '';
     public string $modalNotes         = '';
     public string $modalDesignNotes   = '';
     public        $modalDesignFile    = null; // Livewire TemporaryUploadedFile
@@ -700,6 +701,7 @@ class Pos extends Page
         $this->modalWashingSkipReason = '';
         $this->modalDeliveryType    = 'pickup';
         $this->modalDeliveryAddress = $this->customerAddress;
+        $this->modalDeliveryDate    = '';
         $this->modalNotes           = '';
         $this->modalDesignNotes     = '';
         $this->modalDesignFile      = null;
@@ -707,6 +709,10 @@ class Pos extends Page
         // Pre-load BOM from product materials
         $product = Product::with(['materials.material', 'measurementTemplate', 'variants' => fn ($q) => $q->where('is_active', true)->orderBy('variant_type')])->find($productId);
         if ($product) {
+            $hours = (int) ($product->estimated_production_hours ?? 0);
+            $days  = $hours > 0 ? (int) ceil($hours / 8) : 7;
+            $this->modalDeliveryDate = now()->addWeekdays($days)->format('Y-m-d');
+
             foreach ($product->materials as $m) {
                 $unitPrice = (float) ($m->material?->price ?? 0);
                 $this->modalBom[] = [
@@ -1044,6 +1050,7 @@ class Pos extends Page
             'washing_skipped'      => ! $this->modalWashingRequired,
             'washing_skip_reason'  => $this->modalWashingSkipReason,
             'delivery_type'        => $this->modalDeliveryType,
+            'delivery_date'        => $this->modalDeliveryDate ?: null,
             '_item_notes'          => $this->modalNotes,
             'design_notes'         => trim($this->modalDesignNotes) ?: null,
             'design_file'          => $designFilePath,
@@ -1073,6 +1080,13 @@ class Pos extends Page
         $this->modalProductId   = null;
 
         $this->autoFillEstimatedDate();
+
+        // Take the later of the auto-calculated date and the item's delivery date
+        if (!empty($this->modalDeliveryDate)) {
+            if (empty($this->estimatedCompletionDate) || $this->modalDeliveryDate > $this->estimatedCompletionDate) {
+                $this->estimatedCompletionDate = $this->modalDeliveryDate;
+            }
+        }
     }
 
     // ── Manual Item Management â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -1550,6 +1564,7 @@ class Pos extends Page
                 'unit_price'          => (float) ($item['unit_price'] ?? 0),
                 'subtotal'            => (float) ($item['subtotal']   ?? 0),
                 'delivery_type'       => $item['delivery_type'] ?? 'pickup',
+                'delivery_date'       => $item['delivery_date'] ?? null,
                 'production_type'     => $isProduction ? 'production' : 'ready_made',
                 'production_path'     => $isProduction ? $productionPath : null,
                 'item_stage'          => $isProduction ? $productionPath[0] : 'pending',

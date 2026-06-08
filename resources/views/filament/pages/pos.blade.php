@@ -1651,6 +1651,10 @@
                            style="width:100%;">
                 </div>
                 @endif
+                <div class="mfield" style="margin-top:.75rem;">
+                    <label>{{ $modalDeliveryType === 'delivery' ? 'Delivery date' : 'Ready by' }}</label>
+                    <input wire:model.live="modalDeliveryDate" type="date" style="width:100%;">
+                </div>
             </div>
             @endif
 
