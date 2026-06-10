@@ -1079,13 +1079,14 @@ class Pos extends Page
         $this->showProductModal = false;
         $this->modalProductId   = null;
 
-        $this->autoFillEstimatedDate();
-
-        // Take the later of the auto-calculated date and the item's delivery date
         if (!empty($this->modalDeliveryDate)) {
+            // Cashier explicitly chose a date — honour it; take max with any prior item's date
             if (empty($this->estimatedCompletionDate) || $this->modalDeliveryDate > $this->estimatedCompletionDate) {
                 $this->estimatedCompletionDate = $this->modalDeliveryDate;
             }
+        } else {
+            // No explicit date — fall back to auto-calculation from product hours
+            $this->autoFillEstimatedDate();
         }
     }
 
