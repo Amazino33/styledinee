@@ -1269,7 +1269,7 @@ class Pos extends Page
         if ($payMode === 'cash') {
             $this->splits = [['method' => 'cash', 'amount' => (string) $cashAmt]];
         } elseif ($payMode === 'transfer') {
-            $this->splits = [['method' => 'transfer', 'amount' => (string) $netTotal]];
+            $this->splits = [['method' => 'transfer', 'amount' => (string) $transferAmt]];
         } else {
             $this->splits = [];
             if ($cashAmt > 0) {
