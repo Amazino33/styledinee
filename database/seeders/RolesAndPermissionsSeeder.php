@@ -26,7 +26,7 @@ class RolesAndPermissionsSeeder extends Seeder
             // Enquiries
             'view enquiries', 'respond enquiries',
             // Users / Roles
-            'manage users', 'manage roles',
+            'send_broadcast', 'manage users', 'manage roles',
             // Status Logs
             'view status logs',
             // Customers

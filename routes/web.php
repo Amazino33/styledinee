@@ -54,3 +54,8 @@ Route::get('/shop',      [FrontendController::class, 'shop'])->name('shop');
 Route::get('/gallery',   [FrontendController::class, 'gallery'])->name('gallery');
 Route::get('/contact',   [FrontendController::class, 'contact'])->name('contact');
 Route::post('/contact',  [FrontendController::class, 'submitEnquiry'])->name('contact.submit');
+
+Route::middleware(\App\Http\Middleware\EnsureAdminAccess::class)->group(function () {
+    Route::get('/messaging', [App\Http\Controllers\MessagingController::class, 'index'])->name('messaging.index');
+    Route::post('/messaging/send', [App\Http\Controllers\MessagingController::class, 'send'])->name('messaging.send');
+});

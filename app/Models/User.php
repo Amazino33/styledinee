@@ -55,7 +55,7 @@ class User extends Authenticatable implements FilamentUser
         if (! $this->is_active) return false;
 
         return $this->roles()->whereIn('name', [
-            'admin', 'cashier', 'tailor', 'embroidery',
+            'super_admin', 'admin', 'cashier', 'tailor', 'embroidery',
             'dry_cleaner', 'delivery', 'printer',
         ])->exists();
     }
