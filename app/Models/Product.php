@@ -8,7 +8,7 @@ use Illuminate\Support\Str;
 class Product extends Model
 {
     protected $fillable = [
-        'name', 'slug', 'description', 'price', 'stock_quantity',
+        'name', 'slug', 'description', 'price', 'cost_price', 'stock_quantity',
         'category', 'image', 'is_active', 'is_published', 'is_material', 'unit', 'sort_order',
         'production_type', 'product_type', 'order_type_id',
         'estimated_production_hours', 'is_embroidery',
@@ -20,6 +20,7 @@ class Product extends Model
         'is_material'                => 'boolean',
         'is_embroidery'              => 'boolean',
         'price'                      => 'decimal:2',
+        'cost_price'                => 'decimal:2',
         'estimated_production_hours' => 'integer',
     ];
 

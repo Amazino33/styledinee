@@ -29,12 +29,7 @@ class OrderPolicy
 
     public function update(AuthUser $authUser, Order $order): bool
     {
-        if (! $authUser->can('Update:Order')) return false;
-        if ($authUser->hasAnyRole(['admin', 'cashier'])) return true;
-        if ($authUser->hasRole('tailor')) return in_array($order->type, ['tailoring', 'alteration']);
-        if ($authUser->hasRole('dry_cleaner')) return $order->type === 'dry_cleaning';
-        if ($authUser->hasRole('delivery')) return $order->type === 'pickup_delivery';
-        return false;
+        return $authUser->can('Update:Order');
     }
 
     public function delete(AuthUser $authUser, Order $order): bool

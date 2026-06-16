@@ -291,6 +291,12 @@ class ProductResource extends Resource
                     ->prefix('₦')
                     ->live(onBlur: true)
                     ->afterStateUpdated(fn (Set $set) => $set('_bom_warning_acknowledged', false)),
+                
+                TextInput::make('cost_price')
+                    ->required()
+                    ->numeric()
+                    ->prefix('₦')
+                    ->label('Cost Price'),
 
                 TextInput::make('stock_quantity')
                     ->numeric()
@@ -332,6 +338,17 @@ class ProductResource extends Resource
                 Tables\Columns\IconColumn::make('is_active')->boolean()->label('Active'),
                 Tables\Columns\IconColumn::make('is_published')->boolean()->label('Published'),
                 Tables\Columns\IconColumn::make('is_embroidery')->boolean()->label('Embroidery'),
+                Tables\Columns\TextColumn::make('cost_price')
+                    ->money('NGN')
+                    ->label('Cost Price')
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('profit')
+                    ->label('Profit')
+                    ->money('NGN')
+                    ->sortable()
+                    ->getStateUsing(fn ($record) => $record->price - $record->cost_price)
+                    ->color(fn ($state) => $state > 0 ? 'success' : 'danger')
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('order_type_id')
