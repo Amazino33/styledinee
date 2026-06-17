@@ -21,6 +21,7 @@ use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
+use Filament\Navigation\NavigationItem;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -71,6 +72,14 @@ class AdminPanelProvider extends PanelProvider
                 'Referral & Rewards',
                 'Settings',
                 'Administration',
+            ])
+            ->navigationItems([
+                NavigationItem::make('Mass Messaging')
+                    ->url('/messaging')
+                    ->icon('heroicon-o-megaphone')
+                    ->group('Settings')
+                    ->sort(15)
+                    ->visible(fn () => auth()->user()?->can('send_broadcast') ?? false),
             ])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
