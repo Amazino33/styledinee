@@ -315,6 +315,21 @@
     </div>
 </div>
 
+{{-- Broadcast Delay --}}
+<div class="s-card">
+    <div class="s-card-title">Broadcast Message Delay</div>
+    <div class="s-card-desc">Controls how fast mass messages are dispatched. Higher = faster but risks provider throttling.</div>
+
+    <div class="s-row" style="max-width:400px;">
+        <div>
+            <label class="s-label">Delay Between Messages (seconds)</label>
+            <input type="number" min="1" max="60" wire:model="broadcast_delay_seconds" class="s-input">
+            @error('broadcast_delay_seconds')<p class="s-err">{{ $message }}</p>@enderror
+            <p class="s-hint">Seconds between each message. Default: 3s. Min: 1s, Max: 60s.</p>
+        </div>
+    </div>
+</div>
+
 {{-- Save --}}
 <div class="s-btn-row" style="margin-bottom:20px;">
     <button class="s-btn s-btn-primary" wire:click="saveMessaging" wire:loading.attr="disabled">

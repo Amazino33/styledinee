@@ -48,12 +48,11 @@ class MessagingController extends Controller
             'recipient_count'   => count($phones),
         ]);
 
-        $rate = max(1, (int) AppSetting::get('broadcast_rate_per_minute', 30));
+        $delay = max(1, (int) AppSetting::get('broadcast_delay_seconds', 3));
 
         foreach ($phones as $index => $phone) {
-            $delaySecs = (int) floor($index / $rate) * 60;
             SendBroadcastJob::dispatch($log->id, $phone, $request->message)
-                ->delay(now()->addSeconds($delaySecs));
+                ->delay(now()->addSeconds($index * $delay));
         }
 
         return response()->json([

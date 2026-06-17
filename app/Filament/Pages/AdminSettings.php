@@ -46,6 +46,9 @@ class AdminSettings extends Page
     public int $otp_window_minutes = 10;
     public int $otp_max_attempts   = 3;
 
+    // ── Broadcast settings ───────────────────────────────────────────────────────
+    public int $broadcast_delay_seconds = 3;
+
     // ── Referral settings ───────────────────────────────────────────────────────
     public bool   $referral_enabled          = false;
     public string $referral_default_amount   = '';
@@ -89,6 +92,9 @@ class AdminSettings extends Page
         $this->otp_window_minutes = (int) AppSetting::get('otp_window_minutes', 10);
         $this->otp_max_attempts   = (int) AppSetting::get('otp_max_attempts', 3);
 
+        // Broadcast
+        $this->broadcast_delay_seconds = (int) AppSetting::get('broadcast_delay_seconds', 3);
+
         // Referral
         $this->referral_enabled          = AppSetting::bool('referral_enabled', false);
         $this->referral_default_amount   = AppSetting::get('referral_default_amount', '0');
@@ -127,12 +133,13 @@ class AdminSettings extends Page
     public function saveMessaging(): void
     {
         $this->validate([
-            'instance_id'        => ['nullable', 'string', 'max:100'],
-            'access_token'       => ['nullable', 'string', 'max:200'],
-            'sms_api_key'        => ['nullable', 'string', 'max:200'],
-            'sms_api_secret'     => ['nullable', 'string', 'max:200'],
-            'sms_sender_id'      => ['nullable', 'string', 'max:20'],
-            'otp_window_minutes' => ['required', 'integer', 'min:1', 'max:60'],
+            'instance_id'               => ['nullable', 'string', 'max:100'],
+            'access_token'              => ['nullable', 'string', 'max:200'],
+            'sms_api_key'               => ['nullable', 'string', 'max:200'],
+            'sms_api_secret'            => ['nullable', 'string', 'max:200'],
+            'sms_sender_id'             => ['nullable', 'string', 'max:20'],
+            'otp_window_minutes'        => ['required', 'integer', 'min:1', 'max:60'],
+            'broadcast_delay_seconds'  => ['required', 'integer', 'min:1', 'max:60'],
             'otp_max_attempts'   => ['required', 'integer', 'min:1', 'max:10'],
         ]);
 
@@ -148,6 +155,8 @@ class AdminSettings extends Page
 
         AppSetting::set('otp_window_minutes', (string) $this->otp_window_minutes);
         AppSetting::set('otp_max_attempts',   (string) $this->otp_max_attempts);
+
+        AppSetting::set('broadcast_delay_seconds', (string) $this->broadcast_delay_seconds);
 
         Notification::make()->title('Messaging settings saved.')->success()->send();
     }
