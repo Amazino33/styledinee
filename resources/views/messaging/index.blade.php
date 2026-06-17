@@ -155,9 +155,9 @@ document.getElementById('customerSearch').addEventListener('input', function () 
         .then(r => r.json())
         .then(data => {
             searchResults.innerHTML = '';
-            if (!data.customers.length) {
-                searchResults.innerHTML = '<div style="padding:.6rem 1rem; font-size:.85rem; color:#9ca3af;">No customers found.</div>';
-            } else {
+            const q = document.getElementById('customerSearch').value.trim();
+
+            if (data.customers.length) {
                 data.customers.forEach(c => {
                     const item = document.createElement('div');
                     item.style.cssText = 'padding:.6rem 1rem; cursor:pointer; font-size:.85rem; border-bottom:1px solid #f3f4f6;';
@@ -171,7 +171,24 @@ document.getElementById('customerSearch').addEventListener('input', function () 
                     });
                     searchResults.appendChild(item);
                 });
+            } else {
+                searchResults.innerHTML = '<div style="padding:.6rem 1rem; font-size:.85rem; color:#9ca3af;">No customers found.</div>';
             }
+
+            if (!recipients.includes(q)) {
+                const addItem = document.createElement('div');
+                addItem.style.cssText = 'padding:.6rem 1rem; cursor:pointer; font-size:.85rem; color:#C9A84C; font-weight:600; border-top:1px solid #f3f4f6;';
+                addItem.textContent = `+ Add "${q}" as recipient`;
+                addItem.addEventListener('mouseenter', () => addItem.style.background = '#fef3c7');
+                addItem.addEventListener('mouseleave', () => addItem.style.background = '');
+                addItem.addEventListener('click', () => {
+                    addRecipient(q, q);
+                    document.getElementById('customerSearch').value = '';
+                    searchResults.style.display = 'none';
+                });
+                searchResults.appendChild(addItem);
+            }
+
             searchResults.style.display = 'block';
         });
     }, 300);
