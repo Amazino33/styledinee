@@ -58,4 +58,6 @@ Route::post('/contact',  [FrontendController::class, 'submitEnquiry'])->name('co
 Route::middleware(\App\Http\Middleware\EnsureAdminAccess::class)->group(function () {
     Route::get('/messaging', [App\Http\Controllers\MessagingController::class, 'index'])->name('messaging.index');
     Route::post('/messaging/send', [App\Http\Controllers\MessagingController::class, 'send'])->name('messaging.send');
+    Route::get('/messaging/audience-phones', [App\Http\Controllers\MessagingController::class, 'audiencePhones'])->name('messaging.audience-phones');
+    Route::get('/messaging/search-customers', [App\Http\Controllers\MessagingController::class, 'searchCustomers'])->name('messaging.search-customers');
 });

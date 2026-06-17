@@ -24,18 +24,12 @@ class MessagingController extends Controller
     public function send(Request $request): JsonResponse
     {
         $request->validate([
-            'message' => 'required|string|max:1600',
-            'audience_type' => 'required|in:manual,all_customers,new_customers',
-            'recipients' => 'required_if:audience_type,manual|nullable|string',
+            'message'       => 'required|string|max:1600',
+            'audience_type' => 'required|string',
+            'recipients'    => 'required|string',
         ]);
 
-        $phones = match ($request->audience_type) {
-            'all_customers' => Customer::whereNotNull('phone')->pluck('phone')->all(),
-            'new_customers' => Customer::whereNotNull('phone')
-                                    ->where('created_at', '>=', now()->subDays(30))
-                                    ->pluck('phone')->all(),
-            'manual'        => $this->parseRecipients($request->recipients),
-        };
+        $phones = $this->parseRecipients($request->recipients);
 
         if (empty($phones)) {
             return response()->json(['error' => 'No valid recipients found.'], 422);
@@ -69,5 +63,35 @@ class MessagingController extends Controller
             ->unique()
             ->values()
             ->all();
+    }
+
+    public function audiencePhones(Request $request): JsonResponse
+    {
+        $request->validate(['type' => 'required|string']);
+
+        $phones = match ($request->type) {
+            'all_customers' => Customer::whereNotNull('phone')->pluck('phone')->all(),
+            'new_customers' => Customer::whereNotNull('phone')
+                                ->where('created_at', '>=', now()->subDays(30))
+                                ->pluck('phone')->all(),
+            default         => [],
+        };
+
+        return response()->json(['phones' => $phones]);
+    }
+
+    public function searchCustomers(Request $request): JsonResponse
+    {
+        $request->validate(['q' => 'required|string|min:2|max:100']);
+
+        $customers = Customer::whereNotNull('phone')
+            ->where(function ($q) use ($request) {
+                $q->where('name', 'like', '%' . $request->q . '%')
+                  ->orWhere('phone', 'like', '%' . $request->q . '%');
+            })
+            ->limit(10)
+            ->get(['name', 'phone']);
+
+        return response()->json(['customers'  => $customers]);
     }
 }
