@@ -9,9 +9,15 @@
         'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=800&q=80',
         'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=800&q=80',
         'https://images.unsplash.com/photo-1485968579580-b6d095142e6e?w=800&q=80',
+        'https://images.unsplash.com/photo-1509631179647-0177331693ae?w=800&q=80',
     ];
     shuffle($contactPlaceholders);
-    $contactImage = $hasGallery ? Storage::url($galleryItems->first()->image) : $contactPlaceholders[0];
+    $contactSlides = [];
+    for ($cs = 0; $cs < 4; $cs++) {
+        $contactSlides[] = $hasGallery
+            ? Storage::url($galleryItems[$cs % $galleryItems->count()]->image)
+            : $contactPlaceholders[$cs];
+    }
 @endphp
 
 @section('content')
@@ -33,13 +39,16 @@
         {{-- Info Column --}}
         <div>
             {{-- Fashion Image --}}
-            <div style="
+            <div class="slideshow slideshow--fade" style="
                 width: 100%; aspect-ratio: 4/3;
-                background: url('{{ $contactImage }}') center/cover;
                 border-radius: var(--radius);
                 margin-bottom: 2rem;
                 border: 1px solid var(--border);
-            "></div>
+            ">
+                @foreach ($contactSlides as $cUrl)
+                <div class="slideshow__slide" style="background-image: url('{{ $cUrl }}'); border-radius: var(--radius);"></div>
+                @endforeach
+            </div>
 
             <h2 style="font-size: 1.8rem; margin-bottom: 0.5rem; color: var(--black);">Let's Create Something Together</h2>
             <div class="divider"></div>

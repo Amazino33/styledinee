@@ -435,6 +435,71 @@
             border-color: var(--gold);
         }
 
+        /* ── Slideshow ── */
+        .slideshow {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .slideshow__slide {
+            position: absolute;
+            inset: 0;
+            background-size: cover;
+            background-position: center;
+            opacity: 0;
+        }
+
+        .slideshow__slide:first-child {
+            position: relative;
+        }
+
+        /* Fade */
+        .slideshow--fade .slideshow__slide {
+            animation: ss-fade 20s infinite;
+        }
+        .slideshow--fade .slideshow__slide:nth-child(1) { animation-delay: 0s; }
+        .slideshow--fade .slideshow__slide:nth-child(2) { animation-delay: 5s; }
+        .slideshow--fade .slideshow__slide:nth-child(3) { animation-delay: 10s; }
+        .slideshow--fade .slideshow__slide:nth-child(4) { animation-delay: 15s; }
+
+        @keyframes ss-fade {
+            0%, 5%   { opacity: 0; }
+            8%, 25%  { opacity: 1; }
+            30%, 100%{ opacity: 0; }
+        }
+
+        /* Zoom */
+        .slideshow--zoom .slideshow__slide {
+            animation: ss-zoom 24s infinite;
+        }
+        .slideshow--zoom .slideshow__slide:nth-child(1) { animation-delay: 0s; }
+        .slideshow--zoom .slideshow__slide:nth-child(2) { animation-delay: 6s; }
+        .slideshow--zoom .slideshow__slide:nth-child(3) { animation-delay: 12s; }
+        .slideshow--zoom .slideshow__slide:nth-child(4) { animation-delay: 18s; }
+
+        @keyframes ss-zoom {
+            0%, 4%   { opacity: 0; transform: scale(1); }
+            8%, 25%  { opacity: 1; }
+            29%      { opacity: 1; transform: scale(1.08); }
+            33%, 100%{ opacity: 0; transform: scale(1.08); }
+        }
+
+        /* Slide */
+        .slideshow--slide .slideshow__slide {
+            animation: ss-slide 24s infinite;
+        }
+        .slideshow--slide .slideshow__slide:nth-child(1) { animation-delay: 0s; }
+        .slideshow--slide .slideshow__slide:nth-child(2) { animation-delay: 6s; }
+        .slideshow--slide .slideshow__slide:nth-child(3) { animation-delay: 12s; }
+        .slideshow--slide .slideshow__slide:nth-child(4) { animation-delay: 18s; }
+
+        @keyframes ss-slide {
+            0%       { opacity: 0; transform: translateX(8%); }
+            4%, 25%  { opacity: 1; transform: translateX(0); }
+            29%      { opacity: 1; transform: translateX(-3%); }
+            33%, 100%{ opacity: 0; transform: translateX(-3%); }
+        }
+
         /* ── Footer Gallery Strip ── */
         .footer-strip {
             background: var(--white);

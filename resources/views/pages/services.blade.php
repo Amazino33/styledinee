@@ -20,6 +20,18 @@
         }
         return $placeholders[$svcImgIndex++ % count($placeholders)];
     };
+
+    $slides = function($start = 0) use ($hasGallery, $galleryItems, $placeholders) {
+        $urls = [];
+        for ($s = 0; $s < 4; $s++) {
+            if ($hasGallery) {
+                $urls[] = Storage::url($galleryItems[($start + $s) % $galleryItems->count()]->image);
+            } else {
+                $urls[] = $placeholders[($start + $s) % count($placeholders)];
+            }
+        }
+        return $urls;
+    };
 @endphp
 
 @section('content')
@@ -88,7 +100,12 @@
                     </ul>
                     <a href="{{ url('/contact') }}" class="btn btn--outline">Book This Service</a>
                 </div>
-                <div class="svc-img" style="background-image: url('{{ $getSvcImage() }}');"></div>
+                @php $svcAnims = ['fade', 'zoom', 'slide', 'fade']; @endphp
+                <div class="svc-img slideshow slideshow--{{ $svcAnims[$i % 4] }}">
+                    @foreach ($slides($i * 4) as $url)
+                    <div class="slideshow__slide" style="background-image: url('{{ $url }}');"></div>
+                    @endforeach
+                </div>
             </div>
         </div>
         @endforeach

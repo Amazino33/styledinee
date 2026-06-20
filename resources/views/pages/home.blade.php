@@ -25,6 +25,19 @@
         if ($collection->isEmpty()) return $ph();
         return Storage::url($collection[$index % $collection->count()]->image);
     };
+
+    // Returns 4 image URLs from a collection, offset by $start, cycling through
+    $slides = function($collection, $start = 0) use ($ph) {
+        $urls = [];
+        for ($s = 0; $s < 4; $s++) {
+            if ($collection->isEmpty()) {
+                $urls[] = $ph();
+            } else {
+                $urls[] = Storage::url($collection[($start + $s) % $collection->count()]->image);
+            }
+        }
+        return $urls;
+    };
 @endphp
 
 @section('content')
@@ -45,9 +58,13 @@
         </div>
     </div>
     <div class="hero__gallery">
-        <div class="hero__img" style="background-image: url('{{ $imgFrom($hero, 0) }}');"></div>
-        <div class="hero__img" style="background-image: url('{{ $imgFrom($hero, 1) }}');"></div>
-        <div class="hero__img" style="background-image: url('{{ $imgFrom($hero, 2) }}');"></div>
+        @foreach (['fade', 'zoom', 'slide'] as $si => $anim)
+        <div class="hero__img slideshow slideshow--{{ $anim }}">
+            @foreach ($slides($hero, $si * 4) as $url)
+            <div class="slideshow__slide" style="background-image: url('{{ $url }}');"></div>
+            @endforeach
+        </div>
+        @endforeach
     </div>
 </section>
 
@@ -99,9 +116,14 @@
         ];
         @endphp
 
+        @php $svcAnims = ['fade', 'zoom', 'slide', 'fade']; @endphp
         @foreach ($services as $si => $s)
         <a href="{{ url('/services') }}" class="card svc-card" style="overflow: hidden; text-decoration: none;">
-            <div class="svc-card__img" style="background-image: url('{{ $imgFrom($svcImages, $si) }}');"></div>
+            <div class="svc-card__img slideshow slideshow--{{ $svcAnims[$si] }}">
+                @foreach ($slides($svcImages, $si * 4) as $url)
+                <div class="slideshow__slide" style="background-image: url('{{ $url }}');"></div>
+                @endforeach
+            </div>
             <div style="padding: 1.25rem;">
                 <h3 style="font-size: 1.15rem; margin-bottom: 0.5rem; color: var(--black);">{{ $s['title'] }}</h3>
                 <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.7;">{{ $s['desc'] }}</p>
@@ -142,11 +164,14 @@
             <a href="{{ url('/services') }}" class="btn btn--gold" style="margin-top: 1.5rem;">View All Services</a>
         </div>
         <div style="position: relative;">
-            <div style="
-                width: 100%; aspect-ratio: 4/5;
-                background: url('{{ $whyUs ? Storage::url($whyUs->image) : $ph() }}') center/cover;
-                border-radius: var(--radius);
-            "></div>
+            <div class="slideshow slideshow--zoom" style="width: 100%; aspect-ratio: 4/5; border-radius: var(--radius);">
+                @php
+                    $whyUsCollection = App\Models\Gallery::forSection('why_us')->limit(4)->get();
+                @endphp
+                @foreach ($slides($whyUsCollection, 0) as $url)
+                <div class="slideshow__slide" style="background-image: url('{{ $url }}'); border-radius: var(--radius);"></div>
+                @endforeach
+            </div>
             <div style="
                 position: absolute; bottom: -1.5rem; right: -1.5rem;
                 background: var(--gold);
