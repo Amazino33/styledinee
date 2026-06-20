@@ -22,7 +22,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         View::composer('layouts.app', function ($view) {
-            $view->with('footerGallery', Gallery::where('is_active', true)->inRandomOrder()->limit(8)->get());
+            $view->with('footerGallery', Gallery::forSection('footer')->limit(8)->get());
         });
     }
 }

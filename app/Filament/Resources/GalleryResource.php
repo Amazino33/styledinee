@@ -6,6 +6,7 @@ use App\Filament\Resources\GalleryResource\Pages;
 use App\Models\Gallery;
 use Filament\Forms\Components\FileUpload;
 use Filament\Schemas\Components\Section;
+use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
@@ -44,6 +45,20 @@ class GalleryResource extends Resource
                     ->image()
                     ->required()
                     ->directory('gallery')
+                    ->columnSpanFull(),
+
+                CheckboxList::make('sections')
+                    ->label('Show on sections')
+                    ->options([
+                        'hero'      => 'Hero (landing page top)',
+                        'portfolio' => 'Portfolio (masonry grid)',
+                        'services'  => 'Services (service cards)',
+                        'strip'     => 'Fashion Strip (scrolling banner)',
+                        'why_us'    => 'Why Choose Us (side image)',
+                        'footer'    => 'Footer Strip',
+                        'contact'   => 'Contact Page',
+                    ])
+                    ->columns(2)
                     ->columnSpanFull(),
 
                 Toggle::make('is_active')->default(true),

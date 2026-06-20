@@ -12,14 +12,19 @@ class FrontendController extends Controller
 {
     public function home()
     {
-        $galleryItems = Gallery::where('is_active', true)->inRandomOrder()->get();
-        return view('pages.home', compact('galleryItems'));
+        $hero      = Gallery::forSection('hero')->get();
+        $portfolio = Gallery::forSection('portfolio')->get();
+        $svcImages = Gallery::forSection('services')->get();
+        $strip     = Gallery::forSection('strip')->get();
+        $whyUs     = Gallery::forSection('why_us')->first();
+
+        return view('pages.home', compact('hero', 'portfolio', 'svcImages', 'strip', 'whyUs'));
     }
 
     public function services()
     {
         $services = Service::where('is_active', true)->orderBy('sort_order')->get();
-        $galleryItems = Gallery::where('is_active', true)->inRandomOrder()->get();
+        $galleryItems = Gallery::forSection('services')->get();
         return view('pages.services', compact('services', 'galleryItems'));
     }
 
@@ -37,7 +42,7 @@ class FrontendController extends Controller
 
     public function contact()
     {
-        $galleryItems = Gallery::where('is_active', true)->inRandomOrder()->get();
+        $galleryItems = Gallery::forSection('contact')->get();
         return view('pages.contact', compact('galleryItems'));
     }
 

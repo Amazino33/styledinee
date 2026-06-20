@@ -3,8 +3,6 @@
 @section('title', 'Styledinee — Premium Bespoke Tailoring')
 
 @php
-    $hasGallery = $galleryItems->count() > 0;
-
     $placeholders = [
         'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=800&q=80',
         'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=800&q=80',
@@ -20,16 +18,12 @@
         'https://images.unsplash.com/photo-1529139574466-a303027c1d8b?w=800&q=80',
     ];
     shuffle($placeholders);
+    $pi = 0;
+    $ph = function() use ($placeholders, &$pi) { return $placeholders[$pi++ % count($placeholders)]; };
 
-    // Helper: get image URL — uses gallery if available, falls back to placeholders
-    $imgIndex = 0;
-    $getImage = function() use ($hasGallery, $galleryItems, $placeholders, &$imgIndex) {
-        if ($hasGallery) {
-            $item = $galleryItems[$imgIndex % $galleryItems->count()];
-            $imgIndex++;
-            return Storage::url($item->image);
-        }
-        return $placeholders[$imgIndex++ % count($placeholders)];
+    $imgFrom = function($collection, $index = 0) use ($ph) {
+        if ($collection->isEmpty()) return $ph();
+        return Storage::url($collection[$index % $collection->count()]->image);
     };
 @endphp
 
@@ -51,9 +45,9 @@
         </div>
     </div>
     <div class="hero__gallery">
-        <div class="hero__img" style="background-image: url('{{ $getImage() }}');"></div>
-        <div class="hero__img" style="background-image: url('{{ $getImage() }}');"></div>
-        <div class="hero__img" style="background-image: url('{{ $getImage() }}');"></div>
+        <div class="hero__img" style="background-image: url('{{ $imgFrom($hero, 0) }}');"></div>
+        <div class="hero__img" style="background-image: url('{{ $imgFrom($hero, 1) }}');"></div>
+        <div class="hero__img" style="background-image: url('{{ $imgFrom($hero, 2) }}');"></div>
     </div>
 </section>
 
@@ -68,10 +62,10 @@
     <div class="masonry">
         @for ($i = 0; $i < 12; $i++)
         <a href="{{ url('/gallery') }}" class="masonry__item">
-            <img src="{{ $getImage() }}" alt="Fashion portfolio" loading="lazy">
+            <img src="{{ $imgFrom($portfolio, $i) }}" alt="Fashion portfolio" loading="lazy">
             <div class="masonry__overlay">
-                @if ($hasGallery)
-                    @php $gi = $galleryItems[$i % $galleryItems->count()]; @endphp
+                @if ($portfolio->isNotEmpty())
+                    @php $gi = $portfolio[$i % $portfolio->count()]; @endphp
                     <span class="masonry__title">{{ $gi->title }}</span>
                     @if($gi->category)
                     <span class="masonry__cat">{{ ucfirst(str_replace('_', ' ', $gi->category)) }}</span>
@@ -105,9 +99,9 @@
         ];
         @endphp
 
-        @foreach ($services as $s)
+        @foreach ($services as $si => $s)
         <a href="{{ url('/services') }}" class="card svc-card" style="overflow: hidden; text-decoration: none;">
-            <div class="svc-card__img" style="background-image: url('{{ $getImage() }}');"></div>
+            <div class="svc-card__img" style="background-image: url('{{ $imgFrom($svcImages, $si) }}');"></div>
             <div style="padding: 1.25rem;">
                 <h3 style="font-size: 1.15rem; margin-bottom: 0.5rem; color: var(--black);">{{ $s['title'] }}</h3>
                 <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.7;">{{ $s['desc'] }}</p>
@@ -121,10 +115,10 @@
 <section class="strip">
     <div class="strip__track">
         @for ($i = 0; $i < 10; $i++)
-        <div class="strip__img" style="background-image: url('{{ $getImage() }}');"></div>
+        <div class="strip__img" style="background-image: url('{{ $imgFrom($strip, $i) }}');"></div>
         @endfor
         @for ($i = 0; $i < 10; $i++)
-        <div class="strip__img" style="background-image: url('{{ $getImage() }}');"></div>
+        <div class="strip__img" style="background-image: url('{{ $imgFrom($strip, $i) }}');"></div>
         @endfor
     </div>
 </section>
@@ -150,7 +144,7 @@
         <div style="position: relative;">
             <div style="
                 width: 100%; aspect-ratio: 4/5;
-                background: url('{{ $getImage() }}') center/cover;
+                background: url('{{ $whyUs ? Storage::url($whyUs->image) : $ph() }}') center/cover;
                 border-radius: var(--radius);
             "></div>
             <div style="
