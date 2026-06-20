@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Models\Gallery;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -19,6 +21,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        View::composer('layouts.app', function ($view) {
+            $view->with('footerGallery', Gallery::where('is_active', true)->inRandomOrder()->limit(8)->get());
+        });
     }
 }

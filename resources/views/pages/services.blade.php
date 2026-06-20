@@ -3,32 +3,46 @@
 @section('title', 'Services — Styledinee')
 @section('meta_description', 'Bespoke tailoring, dry cleaning, alterations and pickup & delivery in Uyo, Nigeria. Premium quality, Naira-priced.')
 
+@php
+    $hasGallery = $galleryItems->count() > 0;
+    $placeholders = [
+        'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=800&q=80',
+        'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=800&q=80',
+        'https://images.unsplash.com/photo-1485968579580-b6d095142e6e?w=800&q=80',
+        'https://images.unsplash.com/photo-1509631179647-0177331693ae?w=800&q=80',
+    ];
+    $svcImgIndex = 0;
+    $getSvcImage = function() use ($hasGallery, $galleryItems, $placeholders, &$svcImgIndex) {
+        if ($hasGallery) {
+            $item = $galleryItems[$svcImgIndex % $galleryItems->count()];
+            $svcImgIndex++;
+            return Storage::url($item->image);
+        }
+        return $placeholders[$svcImgIndex++ % count($placeholders)];
+    };
+@endphp
+
 @section('content')
 
 {{-- Page Header --}}
-<section style="
-    padding: 8rem 5vw 5rem;
-    background: linear-gradient(180deg, var(--off-black) 0%, var(--black) 100%);
-    border-bottom: 1px solid var(--border);
-    text-align: center;
-">
+<section class="page-header">
     <span class="section__label">What We Offer</span>
-    <h1 class="section__title" style="font-size: clamp(2.5rem, 5vw, 4rem);">Our Services</h1>
+    <h1 class="section__title">Our Services</h1>
     <div class="divider" style="margin: 1.5rem auto;"></div>
-    <p style="color: rgba(250,250,248,0.55); max-width: 520px; margin: 0 auto; font-size: 1rem;">
+    <p style="color: var(--text-muted); max-width: 520px; margin: 0 auto; font-size: 1rem;">
         From custom bespoke pieces to same-day dry cleaning — every service is delivered with the precision and care Styledinee is known for.
     </p>
 </section>
 
 {{-- Services Grid --}}
-<section class="section section--dark">
+<section class="section section--off">
     @php
     $servicesList = [
         [
             'slug' => 'tailoring',
             'title' => 'Bespoke Tailoring',
             'price' => 'From ₦15,000',
-            'desc' => 'We craft garments from scratch, tailored to your exact measurements and style vision. Whether it's a Nigerian traditional outfit, a power suit, or an evening dress — we bring it to life with premium fabrics and expert hands.',
+            'desc' => 'We craft garments from scratch, tailored to your exact measurements and style vision. Whether it\'s a Nigerian traditional outfit, a power suit, or an evening dress — we bring it to life with premium fabrics and expert hands.',
             'features' => ['Personal measurements & style consultation', 'Choice of premium fabrics', 'Multiple fitting sessions', 'Agbada, Kaftan, Suits, Gowns & more'],
         ],
         [
@@ -55,39 +69,26 @@
     ];
     @endphp
 
-    <div style="display: flex; flex-direction: column; gap: 5rem;">
+    <div style="display: flex; flex-direction: column; gap: 3rem;">
         @foreach ($servicesList as $i => $svc)
-        <div style="
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 4rem;
-            align-items: center;
-            {{ $i % 2 === 1 ? 'direction: rtl;' : '' }}
-        ">
-            <div style="{{ $i % 2 === 1 ? 'direction: ltr;' : '' }}">
-                <span class="section__label">{{ sprintf('%02d', $i + 1) }}</span>
-                <h2 style="font-size: clamp(1.8rem, 3vw, 2.5rem); margin-bottom: 0.5rem;">{{ $svc['title'] }}</h2>
-                <div style="color: var(--gold); font-size: 0.95rem; margin-bottom: 1rem; font-weight: 500;">{{ $svc['price'] }}</div>
-                <div class="divider"></div>
-                <p style="color: rgba(250,250,248,0.6); line-height: 1.9; margin-bottom: 1.5rem;">{{ $svc['desc'] }}</p>
-                <ul style="list-style: none; margin-bottom: 2rem;">
-                    @foreach ($svc['features'] as $f)
-                    <li style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.6rem; font-size: 0.9rem; color: rgba(250,250,248,0.75);">
-                        <span style="color: var(--gold); font-size: 0.7rem;">✦</span> {{ $f }}
-                    </li>
-                    @endforeach
-                </ul>
-                <a href="{{ url('/contact') }}" class="btn btn--outline">Book This Service</a>
-            </div>
-            <div style="{{ $i % 2 === 1 ? 'direction: ltr;' : '' }}">
-                <div style="
-                    width: 100%; aspect-ratio: 4/3;
-                    background: var(--off-black);
-                    border: 1px solid var(--border);
-                    display: flex; align-items: center; justify-content: center;
-                    font-family: 'Cormorant Garamond', serif;
-                    font-size: 5rem; color: rgba(201,168,76,0.15);
-                ">{{ $svc['slug'] === 'tailoring' ? '✦' : ($svc['slug'] === 'dry_cleaning' ? '◈' : ($svc['slug'] === 'alteration' ? '⌖' : '⟳')) }}</div>
+        <div class="card" style="padding: 0; overflow: hidden;">
+            <div class="svc-row {{ $i % 2 === 1 ? 'svc-row--reverse' : '' }}">
+                <div style="padding: 2.5rem;">
+                    <span class="section__label">{{ sprintf('%02d', $i + 1) }}</span>
+                    <h2 style="font-size: clamp(1.6rem, 3vw, 2.2rem); margin-bottom: 0.5rem; color: var(--black);">{{ $svc['title'] }}</h2>
+                    <div style="color: var(--gold); font-size: 0.95rem; margin-bottom: 1rem; font-weight: 600;">{{ $svc['price'] }}</div>
+                    <div class="divider"></div>
+                    <p style="color: var(--text-muted); line-height: 1.9; margin-bottom: 1.5rem;">{{ $svc['desc'] }}</p>
+                    <ul style="list-style: none; margin-bottom: 2rem;">
+                        @foreach ($svc['features'] as $f)
+                        <li style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.6rem; font-size: 0.9rem; color: var(--text);">
+                            <span style="color: var(--gold); font-size: 0.7rem;">✦</span> {{ $f }}
+                        </li>
+                        @endforeach
+                    </ul>
+                    <a href="{{ url('/contact') }}" class="btn btn--outline">Book This Service</a>
+                </div>
+                <div class="svc-img" style="background-image: url('{{ $getSvcImage() }}');"></div>
             </div>
         </div>
         @endforeach
@@ -95,11 +96,11 @@
 </section>
 
 {{-- Pricing Note --}}
-<section class="section section--off" style="text-align: center;">
+<section class="section section--white" style="text-align: center;">
     <span class="section__label">Pricing</span>
     <h2 class="section__title">Transparent Naira Pricing</h2>
     <div class="divider" style="margin: 1.5rem auto;"></div>
-    <p style="color: rgba(250,250,248,0.55); max-width: 560px; margin: 0 auto 2.5rem;">
+    <p style="color: var(--text-muted); max-width: 560px; margin: 0 auto 2.5rem;">
         All prices are in Nigerian Naira (₦). Final pricing depends on fabric, complexity and urgency. Contact us for a precise quote.
     </p>
     <a href="{{ url('/contact') }}" class="btn btn--gold">Request a Quote</a>
@@ -109,10 +110,37 @@
 
 @push('styles')
 <style>
+    .card:hover { transform: none; }
+
+    .svc-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        align-items: stretch;
+    }
+
+    .svc-row--reverse {
+        direction: rtl;
+    }
+
+    .svc-row--reverse > * {
+        direction: ltr;
+    }
+
+    .svc-img {
+        background-size: cover;
+        background-position: center;
+        min-height: 320px;
+    }
+
     @media (max-width: 768px) {
-        div[style*="grid-template-columns: 1fr 1fr"] {
-            grid-template-columns: 1fr !important;
-            direction: ltr !important;
+        .svc-row, .svc-row--reverse {
+            grid-template-columns: 1fr;
+            direction: ltr;
+        }
+
+        .svc-img {
+            min-height: 250px;
+            order: -1;
         }
     }
 </style>

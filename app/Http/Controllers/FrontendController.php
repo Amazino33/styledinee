@@ -12,13 +12,15 @@ class FrontendController extends Controller
 {
     public function home()
     {
-        return view('pages.home');
+        $galleryItems = Gallery::where('is_active', true)->inRandomOrder()->get();
+        return view('pages.home', compact('galleryItems'));
     }
 
     public function services()
     {
         $services = Service::where('is_active', true)->orderBy('sort_order')->get();
-        return view('pages.services', compact('services'));
+        $galleryItems = Gallery::where('is_active', true)->inRandomOrder()->get();
+        return view('pages.services', compact('services', 'galleryItems'));
     }
 
     public function shop()
@@ -35,7 +37,8 @@ class FrontendController extends Controller
 
     public function contact()
     {
-        return view('pages.contact');
+        $galleryItems = Gallery::where('is_active', true)->inRandomOrder()->get();
+        return view('pages.contact', compact('galleryItems'));
     }
 
     public function submitEnquiry(Request $request)

@@ -19,21 +19,29 @@
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         :root {
-            --gold:   #C9A84C;
-            --gold-light: #DFC07A;
-            --black:  #0D0D0D;
-            --off-black: #1A1A1A;
-            --white:  #FAFAF8;
-            --gray:   #6B6B6B;
-            --border: rgba(201,168,76,0.25);
+            --gold:        #C9A84C;
+            --gold-light:  #F0E0B0;
+            --black:       #0D0D0D;
+            --white:       #FFFFFF;
+            --off-white:   #FAFAF8;
+            --gray-100:    #F5F5F5;
+            --gray-200:    #E8E8E8;
+            --gray-400:    #9CA3AF;
+            --gray-600:    #6B7280;
+            --gray-800:    #1F2937;
+            --text:        #111111;
+            --text-muted:  #6B7280;
+            --border:      #E5E7EB;
+            --radius:      10px;
+            --shadow:      0 1px 4px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.04);
         }
 
         html { scroll-behavior: smooth; }
 
         body {
             font-family: 'Jost', sans-serif;
-            background: var(--black);
-            color: var(--white);
+            background: var(--gray-100);
+            color: var(--text);
             font-weight: 400;
             line-height: 1.7;
             font-size: 16px;
@@ -51,29 +59,27 @@
 
         /* ── Gold Accent ── */
         .gold { color: var(--gold); }
-        .gold-border { border-color: var(--gold); }
 
         /* ── Nav ── */
         .nav {
-            position: fixed;
+            position: sticky;
             top: 0; left: 0; right: 0;
             z-index: 100;
             display: flex;
             align-items: center;
             justify-content: space-between;
             padding: 0 5vw;
-            height: 72px;
-            background: rgba(13,13,13,0.92);
-            backdrop-filter: blur(10px);
+            height: 64px;
+            background: var(--white);
             border-bottom: 1px solid var(--border);
         }
 
         .nav__logo {
             font-family: 'Cormorant Garamond', serif;
-            font-size: 1.6rem;
+            font-size: 1.4rem;
             font-weight: 600;
-            letter-spacing: 0.08em;
-            color: var(--white);
+            letter-spacing: 0.06em;
+            color: var(--black);
         }
 
         .nav__logo span { color: var(--gold); }
@@ -81,35 +87,52 @@
         .nav__links {
             display: flex;
             align-items: center;
-            gap: 2.5rem;
+            gap: 2rem;
             list-style: none;
         }
 
         .nav__links a {
-            font-size: 0.82rem;
+            font-size: 0.8rem;
             font-weight: 500;
-            letter-spacing: 0.12em;
+            letter-spacing: 0.1em;
             text-transform: uppercase;
-            color: rgba(250,250,248,0.75);
-            transition: color 0.2s;
+            color: var(--text-muted);
+            padding-bottom: 2px;
+            border-bottom: 2px solid transparent;
+            transition: color 0.2s, border-color 0.2s;
         }
 
-        .nav__links a:hover,
-        .nav__links a.active { color: var(--gold); }
+        .nav__links a:hover { color: var(--text); }
+        .nav__links a.active { color: var(--black); border-bottom-color: var(--gold); }
 
         .nav__cta {
-            padding: 0.5rem 1.4rem;
-            border: 1px solid var(--gold);
             color: var(--gold) !important;
-            font-size: 0.78rem !important;
-            letter-spacing: 0.14em !important;
-            text-transform: uppercase;
-            transition: background 0.2s, color 0.2s !important;
+            font-weight: 600 !important;
+            border-bottom: none !important;
         }
 
         .nav__cta:hover {
-            background: var(--gold);
             color: var(--black) !important;
+        }
+
+        .nav__account {
+            padding: 0.5rem 1.3rem;
+            background: var(--black);
+            color: var(--white) !important;
+            border: none !important;
+            border-bottom: none !important;
+            border-radius: 8px;
+            font-size: 0.78rem !important;
+            font-weight: 600;
+            letter-spacing: 0.1em !important;
+            text-transform: uppercase;
+            transition: background 0.2s;
+            padding-bottom: 0.5rem !important;
+        }
+
+        .nav__account:hover {
+            background: var(--gray-800);
+            color: var(--white) !important;
         }
 
         .nav__hamburger {
@@ -124,9 +147,9 @@
 
         .nav__hamburger span {
             display: block;
-            width: 24px;
+            width: 22px;
             height: 1.5px;
-            background: var(--white);
+            background: var(--black);
             transition: all 0.3s;
         }
 
@@ -138,30 +161,32 @@
             .nav__links.open {
                 display: flex;
                 flex-direction: column;
+                align-items: flex-start;
                 position: fixed;
-                top: 72px; left: 0; right: 0;
-                background: var(--off-black);
-                padding: 2rem 5vw;
-                gap: 1.5rem;
+                top: 64px; left: 0; right: 0;
+                background: var(--white);
+                padding: 1.5rem 5vw 1.25rem;
+                gap: 1.25rem;
                 border-bottom: 1px solid var(--border);
+                z-index: 99;
             }
         }
 
         /* ── Main ── */
-        main { padding-top: 72px; }
+        main { min-height: calc(100vh - 64px); }
 
         /* ── Section ── */
         .section {
-            padding: 6rem 5vw;
+            padding: 5rem 5vw;
         }
 
-        .section--dark { background: var(--black); }
-        .section--off { background: var(--off-black); }
+        .section--white { background: var(--white); }
+        .section--off { background: var(--gray-100); }
 
         .section__label {
             display: inline-block;
             font-size: 0.72rem;
-            font-weight: 500;
+            font-weight: 600;
             letter-spacing: 0.2em;
             text-transform: uppercase;
             color: var(--gold);
@@ -170,12 +195,13 @@
 
         .section__title {
             font-size: clamp(2rem, 4vw, 3.2rem);
+            color: var(--black);
             margin-bottom: 1.25rem;
         }
 
         .section__subtitle {
             font-size: 1rem;
-            color: rgba(250,250,248,0.6);
+            color: var(--text-muted);
             max-width: 540px;
             margin-bottom: 3rem;
         }
@@ -183,7 +209,7 @@
         /* ── Gold Divider ── */
         .divider {
             width: 48px;
-            height: 1px;
+            height: 2px;
             background: var(--gold);
             margin: 1.5rem 0;
         }
@@ -193,41 +219,52 @@
             display: inline-flex;
             align-items: center;
             gap: 0.5rem;
-            padding: 0.85rem 2rem;
+            padding: 0.65rem 1.5rem;
+            border-radius: 8px;
             font-family: 'Jost', sans-serif;
-            font-size: 0.78rem;
-            font-weight: 500;
-            letter-spacing: 0.14em;
+            font-size: 0.8rem;
+            font-weight: 600;
+            letter-spacing: 0.1em;
             text-transform: uppercase;
             cursor: pointer;
-            transition: all 0.25s;
+            transition: all 0.2s;
             border: none;
         }
 
         .btn--gold {
             background: var(--gold);
-            color: var(--black);
+            color: var(--white);
         }
 
         .btn--gold:hover {
-            background: var(--gold-light);
+            background: #b8943d;
         }
 
         .btn--outline {
             background: transparent;
-            border: 1px solid var(--gold);
-            color: var(--gold);
+            border: 1.5px solid var(--border);
+            color: var(--text);
         }
 
         .btn--outline:hover {
-            background: var(--gold);
-            color: var(--black);
+            border-color: var(--black);
+        }
+
+        .btn--dark {
+            background: var(--black);
+            color: var(--white);
+        }
+
+        .btn--dark:hover {
+            background: var(--gray-800);
         }
 
         /* ── Cards ── */
         .card {
-            background: var(--off-black);
+            background: var(--white);
             border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
             transition: border-color 0.25s, transform 0.25s;
         }
 
@@ -247,7 +284,7 @@
 
         @media (max-width: 768px) {
             .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
-            .section { padding: 4rem 5vw; }
+            .section { padding: 3.5rem 5vw; }
         }
 
         /* ── Forms ── */
@@ -256,10 +293,10 @@
         .form-group label {
             display: block;
             font-size: 0.75rem;
-            font-weight: 500;
-            letter-spacing: 0.12em;
+            font-weight: 600;
+            letter-spacing: 0.1em;
             text-transform: uppercase;
-            color: rgba(250,250,248,0.5);
+            color: var(--text-muted);
             margin-bottom: 0.5rem;
         }
 
@@ -267,14 +304,15 @@
         .form-group textarea,
         .form-group select {
             width: 100%;
-            background: transparent;
-            border: 1px solid var(--border);
-            color: var(--white);
-            padding: 0.85rem 1rem;
+            background: var(--white);
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            padding: 0.75rem 1rem;
             font-family: 'Jost', sans-serif;
             font-size: 0.95rem;
             outline: none;
-            transition: border-color 0.2s;
+            transition: border-color 0.15s;
         }
 
         .form-group input:focus,
@@ -287,7 +325,7 @@
 
         /* ── Footer ── */
         .footer {
-            background: var(--off-black);
+            background: var(--white);
             border-top: 1px solid var(--border);
             padding: 4rem 5vw 2rem;
         }
@@ -305,19 +343,20 @@
             font-weight: 600;
             letter-spacing: 0.06em;
             margin-bottom: 1rem;
+            color: var(--black);
         }
 
         .footer__logo span { color: var(--gold); }
 
         .footer__tagline {
             font-size: 0.9rem;
-            color: rgba(250,250,248,0.5);
+            color: var(--text-muted);
             line-height: 1.8;
         }
 
         .footer__heading {
             font-size: 0.72rem;
-            font-weight: 500;
+            font-weight: 600;
             letter-spacing: 0.18em;
             text-transform: uppercase;
             color: var(--gold);
@@ -330,7 +369,7 @@
 
         .footer__links a {
             font-size: 0.88rem;
-            color: rgba(250,250,248,0.5);
+            color: var(--text-muted);
             transition: color 0.2s;
         }
 
@@ -343,7 +382,7 @@
             padding-top: 2rem;
             border-top: 1px solid var(--border);
             font-size: 0.78rem;
-            color: rgba(250,250,248,0.35);
+            color: var(--gray-400);
         }
 
         @media (max-width: 768px) {
@@ -353,6 +392,100 @@
 
         @media (max-width: 480px) {
             .footer__grid { grid-template-columns: 1fr; }
+        }
+
+        /* ── Page header ── */
+        .page-header {
+            padding: 3rem 5vw;
+            background: var(--white);
+            border-bottom: 1px solid var(--border);
+            text-align: center;
+        }
+
+        .page-header .section__title {
+            font-size: clamp(2.2rem, 5vw, 3.5rem);
+        }
+
+        /* ── Filter bar ── */
+        .filter-bar {
+            padding: 1.5rem 5vw;
+            background: var(--white);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .filter-btn {
+            padding: 0.5rem 1.25rem;
+            font-family: 'Jost', sans-serif;
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            cursor: pointer;
+            border: 1.5px solid var(--border);
+            border-radius: 100px;
+            background: transparent;
+            color: var(--text-muted);
+            transition: all 0.2s;
+        }
+
+        .filter-btn.active,
+        .filter-btn:hover {
+            background: var(--gold);
+            color: var(--white);
+            border-color: var(--gold);
+        }
+
+        /* ── Footer Gallery Strip ── */
+        .footer-strip {
+            background: var(--white);
+            border-top: 1px solid var(--border);
+            padding: 2rem 5vw 0;
+        }
+
+        .footer-strip__label {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+
+        .footer-strip__grid {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 4px;
+        }
+
+        .footer-strip__item {
+            position: relative;
+            overflow: hidden;
+            aspect-ratio: 1;
+            display: block;
+        }
+
+        .footer-strip__item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            transition: transform 0.4s;
+        }
+
+        .footer-strip__overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(201,168,76,0.0);
+            transition: background 0.3s;
+        }
+
+        .footer-strip__item:hover img { transform: scale(1.08); }
+        .footer-strip__item:hover .footer-strip__overlay { background: rgba(201,168,76,0.2); }
+
+        @media (max-width: 768px) {
+            .footer-strip__grid { grid-template-columns: repeat(4, 1fr); }
+        }
+
+        @media (max-width: 480px) {
+            .footer-strip__grid { grid-template-columns: repeat(3, 1fr); }
         }
     </style>
 
@@ -369,6 +502,7 @@
         <li><a href="{{ url('/shop') }}" class="{{ request()->is('shop') ? 'active' : '' }}">Shop</a></li>
         <li><a href="{{ url('/gallery') }}" class="{{ request()->is('gallery') ? 'active' : '' }}">Gallery</a></li>
         <li><a href="{{ url('/contact') }}" class="nav__cta">Contact Us</a></li>
+        <li><a href="{{ url('/account/login') }}" class="nav__account">My Account</a></li>
     </ul>
 
     <button class="nav__hamburger" id="hamburger" aria-label="Toggle menu">
@@ -379,6 +513,44 @@
 <main>
     @yield('content')
 </main>
+
+{{-- Footer Gallery Strip --}}
+@php
+    $stripPlaceholders = [
+        'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=400&q=80',
+        'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=400&q=80',
+        'https://images.unsplash.com/photo-1485968579580-b6d095142e6e?w=400&q=80',
+        'https://images.unsplash.com/photo-1509631179647-0177331693ae?w=400&q=80',
+        'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=400&q=80',
+        'https://images.unsplash.com/photo-1496747611176-843222e1e57c?w=400&q=80',
+        'https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=400&q=80',
+        'https://images.unsplash.com/photo-1445205170230-053b83016050?w=400&q=80',
+    ];
+    shuffle($stripPlaceholders);
+    $hasFooterGallery = isset($footerGallery) && $footerGallery->count() > 0;
+@endphp
+<div class="footer-strip">
+    <div class="footer-strip__label">
+        <span class="section__label" style="margin: 0;">Follow Our Work</span>
+        <a href="{{ url('/gallery') }}" style="font-size: 0.78rem; color: var(--gold); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;">View Gallery →</a>
+    </div>
+    <div class="footer-strip__grid">
+        @for ($fi = 0; $fi < 8; $fi++)
+            @if ($hasFooterGallery)
+                @php $fItem = $footerGallery[$fi % $footerGallery->count()]; @endphp
+                <a href="{{ url('/gallery') }}" class="footer-strip__item">
+                    <img src="{{ Storage::url($fItem->image) }}" alt="{{ $fItem->title }}" loading="lazy">
+                    <div class="footer-strip__overlay"></div>
+                </a>
+            @else
+                <a href="{{ url('/gallery') }}" class="footer-strip__item">
+                    <img src="{{ $stripPlaceholders[$fi] }}" alt="Fashion portfolio" loading="lazy">
+                    <div class="footer-strip__overlay"></div>
+                </a>
+            @endif
+        @endfor
+    </div>
+</div>
 
 <footer class="footer">
     <div class="footer__grid">
