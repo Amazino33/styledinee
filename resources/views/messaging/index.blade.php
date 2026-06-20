@@ -194,6 +194,35 @@ document.getElementById('customerSearch').addEventListener('input', function () 
     }, 300);
 });
 
+document.getElementById('customerSearch').addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    const val = this.value.trim();
+    if (!val) return;
+
+    val.split(',')
+        .map(s => s.trim())
+        .filter(s => s.length > 0)
+        .forEach(phone => addRecipient(phone, phone));
+
+    this.value = '';
+    searchResults.style.display = 'none';
+});
+
+document.getElementById('customerSearch').addEventListener('paste', function (e) {
+    const pasted = (e.clipboardData || window.clipboardData).getData('text');
+    if (!pasted.includes(',')) return;
+
+    e.preventDefault();
+    pasted.split(',')
+        .map(s => s.trim())
+        .filter(s => s.length > 0)
+        .forEach(phone => addRecipient(phone, phone));
+
+    this.value = '';
+    searchResults.style.display = 'none';
+});
+
 document.addEventListener('click', e => {
     if (!document.getElementById('customerSearch').contains(e.target)) {
         searchResults.style.display = 'none';
