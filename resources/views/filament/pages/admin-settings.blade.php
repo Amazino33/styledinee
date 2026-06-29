@@ -127,6 +127,9 @@
     <button class="s-tab {{ $tab === 'referral'  ? 'active' : '' }}" wire:click="$set('tab','referral')">
         🤝 Referral & Affiliate
     </button>
+    <button class="s-tab {{ $tab === 'storage' ? 'active' : '' }}" wire:click="$set('tab','storage')">
+        ☁️ Storage
+    </button>
     <button class="s-tab {{ $tab === 'pos' ? 'active' : '' }}" wire:click="$set('tab','pos')">
         🧵 POS
     </button>
@@ -524,6 +527,84 @@
     <button class="s-btn s-btn-primary" wire:click="saveReferral" wire:loading.attr="disabled">
         <span wire:loading.remove wire:target="saveReferral">Save Referral & Affiliate Settings</span>
         <span wire:loading wire:target="saveReferral">Saving…</span>
+    </button>
+</div>
+
+@endif
+
+{{-- ══════════ STORAGE TAB ══════════ --}}
+@if($tab === 'storage')
+
+<div class="s-card">
+    <div class="s-card-title">Cloudinary — Image Storage</div>
+    <div class="s-card-desc">
+        Store gallery and product images on
+        <a href="https://cloudinary.com" target="_blank" style="color:var(--gold)">Cloudinary</a>
+        (free tier: 25GB storage, 25GB bandwidth/month). When disabled, images are stored locally.
+    </div>
+
+    <div class="s-toggle-row" style="border-top:none;padding-top:0;">
+        <label class="toggle-switch">
+            <input type="checkbox" wire:model="cloudinary_enabled">
+            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+        </label>
+        <div>
+            <div class="s-toggle-label">Enable Cloudinary</div>
+            <div class="s-toggle-desc">When enabled, all new image uploads go to Cloudinary. Existing local images continue to work.</div>
+        </div>
+        <div style="margin-left:auto">
+            <span class="status-badge {{ $cloudinary_enabled ? 'status-on' : 'status-off' }}">
+                <span style="width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block"></span>
+                {{ $cloudinary_enabled ? 'Cloud' : 'Local' }}
+            </span>
+        </div>
+    </div>
+
+    <div class="s-row">
+        <div>
+            <label class="s-label">Cloud Name</label>
+            <input type="text" wire:model="cloudinary_cloud_name" class="s-input" placeholder="e.g. dxyz1abc2" autocomplete="off">
+            @error('cloudinary_cloud_name')<p class="s-err">{{ $message }}</p>@enderror
+            <p class="s-hint">Found on your Cloudinary dashboard.</p>
+        </div>
+        <div>
+            <label class="s-label">Folder</label>
+            <input type="text" wire:model="cloudinary_folder" class="s-input" placeholder="styledinee" autocomplete="off">
+            @error('cloudinary_folder')<p class="s-err">{{ $message }}</p>@enderror
+            <p class="s-hint">All uploads go into this folder on Cloudinary.</p>
+        </div>
+    </div>
+    <div class="s-row">
+        <div>
+            <label class="s-label">API Key</label>
+            <input type="text" wire:model="cloudinary_api_key" class="s-input" placeholder="Paste your API key" autocomplete="off">
+            @error('cloudinary_api_key')<p class="s-err">{{ $message }}</p>@enderror
+        </div>
+        <div>
+            <label class="s-label">API Secret</label>
+            <input type="password" wire:model="cloudinary_api_secret" class="s-input" placeholder="Paste your API secret" autocomplete="new-password">
+            @error('cloudinary_api_secret')<p class="s-err">{{ $message }}</p>@enderror
+        </div>
+    </div>
+</div>
+
+<div class="s-card" style="background:rgba(201,168,76,.06);border-color:rgba(201,168,76,.3);">
+    <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:1.2rem;">ℹ️</span>
+        <div style="font-size:13px;color:var(--text3);">
+            @if($cloudinary_enabled)
+                New gallery and product image uploads will be stored on Cloudinary. Images already on local storage will still load normally.
+            @else
+                Images are stored locally on this server. Enable Cloudinary to use cloud storage with automatic optimization and CDN delivery.
+            @endif
+        </div>
+    </div>
+</div>
+
+<div class="s-btn-row">
+    <button class="s-btn s-btn-primary" wire:click="saveStorage" wire:loading.attr="disabled">
+        <span wire:loading.remove wire:target="saveStorage">Save Storage Settings</span>
+        <span wire:loading wire:target="saveStorage">Saving…</span>
     </button>
 </div>
 

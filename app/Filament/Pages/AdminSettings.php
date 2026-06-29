@@ -67,6 +67,13 @@ class AdminSettings extends Page
     // ── Credit settings ─────────────────────────────────────────────────────────
     public bool $credit_auto_apply = true;
 
+    // ── Cloudinary settings ─────────────────────────────────────────────────────
+    public bool   $cloudinary_enabled    = false;
+    public string $cloudinary_cloud_name = '';
+    public string $cloudinary_api_key    = '';
+    public string $cloudinary_api_secret = '';
+    public string $cloudinary_folder     = 'styledinee';
+
     // ── POS settings ────────────────────────────────────────────────────────────
     public string $bom_mode = 'full';
 
@@ -112,6 +119,13 @@ class AdminSettings extends Page
 
         // Credit
         $this->credit_auto_apply = AppSetting::bool('credit_auto_apply', true);
+
+        // Cloudinary
+        $this->cloudinary_enabled    = AppSetting::bool('cloudinary_enabled', false);
+        $this->cloudinary_cloud_name = AppSetting::get('cloudinary_cloud_name', '');
+        $this->cloudinary_api_key    = AppSetting::get('cloudinary_api_key', '');
+        $this->cloudinary_api_secret = AppSetting::get('cloudinary_api_secret', '');
+        $this->cloudinary_folder     = AppSetting::get('cloudinary_folder', 'styledinee');
 
         // POS
         $this->bom_mode = AppSetting::get('bom_mode', 'full');
@@ -205,6 +219,24 @@ class AdminSettings extends Page
         AppSetting::set('credit_auto_apply', $this->credit_auto_apply ? '1' : '0');
 
         Notification::make()->title('Referral & Affiliate settings saved.')->success()->send();
+    }
+
+    public function saveStorage(): void
+    {
+        $this->validate([
+            'cloudinary_cloud_name' => ['nullable', 'string', 'max:100'],
+            'cloudinary_api_key'    => ['nullable', 'string', 'max:100'],
+            'cloudinary_api_secret' => ['nullable', 'string', 'max:200'],
+            'cloudinary_folder'     => ['nullable', 'string', 'max:100'],
+        ]);
+
+        AppSetting::set('cloudinary_enabled',    $this->cloudinary_enabled ? '1' : '0');
+        AppSetting::set('cloudinary_cloud_name', trim($this->cloudinary_cloud_name));
+        AppSetting::set('cloudinary_api_key',    trim($this->cloudinary_api_key));
+        AppSetting::set('cloudinary_api_secret', trim($this->cloudinary_api_secret));
+        AppSetting::set('cloudinary_folder',     trim($this->cloudinary_folder) ?: 'styledinee');
+
+        Notification::make()->title('Storage settings saved.')->success()->send();
     }
 
     public function savePos(): void
